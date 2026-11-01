@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Build log · Homeroom</title>
+<meta name="description" content="How Homeroom got built, one chapter at a time.">
+<link rel="canonical" href="https://homeroomdisplay.co/log/">
+<meta name="theme-color" content="#12100E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>document.documentElement.classList.replace('no-js','js')</script>
+<link rel="preload" href="/assets/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="log-top">
+  <a href="/" class="pressable"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg> The wall</a>
+  <a href="/" class="brand">Homeroom</a>
+</header>
+
+<main>
+  <div class="log-head">
+    <span class="lab rv">Build log</span>
+    <h1 class="h1 rv" style="--i:1">The story so far.</h1>
+    <p class="line rv" style="--i:2">What shipped, and what changed in the kitchen. Newest first.</p>
+  </div>
+
+  <!-- Backfill chapters (homeroom-site #2 grouping). Refs are plain text: the product repo is private. -->
+  <ol class="entries">
+    <li class="entry" id="the-rail">
+      <time datetime="2026-11-01" class="rv">November 1, 2026</time>
+      <div class="body">
+        <div class="fit rv" data-mini="today" role="img" aria-label="The Today screen from the sample household's wall: the agenda, dinner, chores and home."></div>
+        <div class="rv" style="--i:1">
+          <h2>The photo steps aside, and the Rail opens</h2>
+          <p>The first try kept the photo on screen and raised Today over it. After a house test on the tablet, the household picked a different idea: a touch means you want something, so the photo yields. It shrinks into the rail, and Today, Week, Home, Chores and who's home are one tap away. Quick add uses picks instead of a keyboard, because nobody types on a wall.</p>
+          <div class="ref">homeroom #10, #18, #27, #33, #38, #39, #40</div>
+        </div>
+      </div>
+    </li>
+    <li class="entry" id="real-data">
+      <time datetime="2026-11-01" class="rv">November 1, 2026</time>
+      <div class="body">
+        <div class="fit rv" data-mini="week" role="img" aria-label="The Week screen from the sample household's wall: seven days, a colour per person, dinner on every day."></div>
+        <div class="rv" style="--i:1">
+          <h2>Real data on the wall</h2>
+          <p>The fakes came off. Weather, who's home, lights and locks now come from Home Assistant, the week comes from the family calendars, and chores, meals and lists come from Family Hub. Each one plugs in behind the same seam the fakes used, so the screens didn't have to change.</p>
+          <div class="ref">homeroom #25, #26, #35, #36</div>
+        </div>
+      </div>
+    </li>
+    <li class="entry" id="curation">
+      <time datetime="2026-11-01" class="rv">November 1, 2026</time>
+      <div class="body">
+        <div class="fit rv" data-mini="wall:meadow" role="img" aria-label="The Wall: a sample photo of green hills at sunset, with the clock and what's next."></div>
+        <div class="rv" style="--i:1">
+          <h2>A photo frame that chooses well</h2>
+          <p>Before it could be a calendar, it had to be a good photo frame. Curation balances people and years, skips screenshots, receipts and blurry shots, and can say in plain words why it picked a photo. Photos fill the screen edge to edge with a slow drift, and the wall moves between Ambient, Glance and Night instead of sitting in one state.</p>
+          <div class="ref">homeroom #12, #13, #15, #16</div>
+        </div>
+      </div>
+    </li>
+    <li class="entry" id="foundation">
+      <time datetime="2026-10-31" class="rv">October 31, 2026</time>
+      <div class="body">
+        <div class="fit rv" data-mini="wall:alpine" role="img" aria-label="The Wall: a sample photo of blue ridges under a pale sun, with the clock and what's next."></div>
+        <div class="rv" style="--i:1">
+          <h2>Foundation: a server, a tablet and a house style</h2>
+          <p>Homeroom started as one small server at home with a fake behind every source, so the screens could be built before any real data showed up. It ran on the real wall tablet from the first day, at its true 1263×841. Then came the house style: Schibsted Grotesk, a warm dark ground, and brass only for what's happening now.</p>
+          <div class="ref">homeroom #4, #9, #11</div>
+        </div>
+      </div>
+    </li>
+  </ol>
+</main>
+
+<footer class="foot"><span>Homeroom · built by Praveen Aravind with an agentic studio</span><a href="/" class="pressable">The wall</a></footer>
+
+<script src="/assets/hub.js" defer></script>
+<script>addEventListener('DOMContentLoaded',()=>{ if(window.HR){ HR.mountMinis(); HR.watchReveals(); } });</script>
+</body>
+</html>

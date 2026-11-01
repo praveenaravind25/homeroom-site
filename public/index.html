@@ -1,22 +1,116 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Homeroom</title>
-<style>
-  html, body { margin: 0; height: 100%; background: #12100E; color: #F7F4EE; font: 500 18px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { min-height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; padding: 24px; }
-  h1 { margin: 0; font-size: clamp(40px, 8vw, 88px); letter-spacing: -0.02em; font-weight: 700; }
-  p { margin: 0; color: #CFC8BB; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #EDC67C; margin-right: 8px; vertical-align: middle; }
-</style>
+<title>Homeroom · a photo frame that knows the household</title>
+<meta name="description" content="Homeroom is a wall tablet that's a photo frame first. A touch opens today, the week, meals, chores and the home.">
+<link rel="canonical" href="https://homeroomdisplay.co/">
+<meta name="theme-color" content="#12100E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>document.documentElement.classList.replace('no-js','js')</script>
+<link rel="preload" href="/assets/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/photos/harbour-dusk.jpg" as="image" fetchpriority="high">
+<link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
+
 <main>
-  <h1>Homeroom</h1>
-  <p><span class="dot"></span>A photo frame that knows the household. Coming soon.</p>
+  <!-- ═════════ The tablet, pinned: Wall → tablet → touch → Week → next week → Home → idle ═════════ -->
+  <section class="stick b-pin" id="pin" aria-labelledby="hero-h">
+    <div class="stage">
+      <header class="top">
+        <a class="brand" href="/" aria-current="page">Homeroom</a>
+        <a class="nav" href="/log/">Build log</a>
+      </header>
+      <p class="phone-cue" aria-hidden="true"><b>It's a photo frame.</b><span>Until you touch it.</span></p>
+      <div class="b-lamp" aria-hidden="true"></div>
+      <div class="b-left">
+        <h1 class="vh" id="hero-h">Homeroom: a wall tablet that's a photo frame first, until you touch it.</h1>
+        <div class="b-caps">
+          <div class="b-cap" data-c="1"><span class="lab">01 · The Wall</span><h2 class="h2">It's a photo frame.</h2><p class="line">Your photos, a quiet clock, the weather and what's next. Readable from across the kitchen.</p></div>
+          <div class="b-cap" data-c="2"><span class="lab">02 · A touch</span><h2 class="h2">Until you touch it.</h2><p class="line">A touch means you want something. The photo steps aside and today rises.</p></div>
+          <div class="b-cap" data-c="3"><span class="lab">03 · Week</span><h2 class="h2">The week, in one look.</h2><p class="line">Everyone has a colour. Dinner sits on every day.</p></div>
+          <div class="b-cap" data-c="4"><span class="lab">03 · Week</span><h2 class="h2">Next week is one swipe away.</h2><p class="line">Planning still happens on phones. The wall just shows it.</p></div>
+          <div class="b-cap" data-c="5"><span class="lab">04 · Home</span><h2 class="h2">The lights, without the app.</h2><p class="line">Only what you'd reach for. Tap Dinner and the table lights come on.</p></div>
+          <div class="b-cap" data-c="6"><span class="lab">05 · Idle</span><h2 class="h2">Then it leans back.</h2><p class="line">Leave it alone and the photo comes home.</p></div>
+          <div class="b-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="device" aria-hidden="true"><div class="fit"><div class="hub rl asleep"></div></div></div>
+      <!-- The Wall, as the product draws it. Static HTML so the hero still shows without JS. -->
+      <div class="wall">
+        <div class="kb"><img src="/assets/photos/harbour-dusk.jpg" width="1600" height="1066" fetchpriority="high" alt="A sample photo on the wall: a harbour at dusk, the sun behind dark hills."></div>
+        <div class="w-ov" aria-hidden="true">
+          <div class="s s-bl"></div><div class="s s-tr"></div><div class="s s-tl"></div><div class="s s-br"></div>
+          <div class="abs w-temp"><b>64°</b><span>Rain after 3</span></div>
+          <div class="abs w-time"><div class="w-date">Tuesday, October 27</div><div class="w-clock">10:42</div>
+            <div class="w-next"><i>NEXT</i><b>11 AM&nbsp; Library story time</b><span>Riley</span></div></div>
+          <div class="abs w-cue"><b>It's a photo frame.</b><span>Until you touch it.</span><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 02 · Who ═════════ -->
+  <section class="story" aria-labelledby="who-h">
+    <span class="lab rv">02 · Who it's for</span>
+    <h2 class="h2 rv" id="who-h" style="--i:1">One wall,<br>the whole household.</h2>
+    <ul class="who3">
+      <li class="rv" style="--i:1"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-1)">A</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-2)">J</span></div><p>The adults tap it.</p></li>
+      <li class="rv" style="--i:2"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-1)">A</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-2)">J</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-3)">S</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-4)">R</span></div><p>Everyone glances.</p></li>
+      <li class="rv" style="--i:3"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;background:var(--c-s2);color:var(--c-chalk)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span></div><p>Phones do the planning.</p></li>
+    </ul>
+  </section>
+
+  <!-- ═════════ 03 · Why (owner's words only; placeholder until supplied) ═════════ -->
+  <section class="story" aria-labelledby="why-h">
+    <span class="lab rv">03 · Why</span>
+    <h2 class="h2 rv" id="why-h" style="--i:1">In the owner's words.</h2>
+    <div class="pending rv" style="--i:2"><b>Pending</b><span>Supplied by the owner. No agent writes this part.</span></div>
+  </section>
+
+  <!-- ═════════ 04 · How ═════════ -->
+  <section class="story" aria-labelledby="how-h">
+    <span class="lab rv">04 · How it's built</span>
+    <h2 class="h2 rv" id="how-h" style="--i:1">One small server,<br>at home.</h2>
+    <p class="line rv" style="--i:2">It borrows what the house already runs.</p>
+    <div class="flow rv" style="--i:3">
+      <ul class="src" aria-label="Sources">
+        <li class="sp"><i></i>Home Assistant</li><li class="sp"><i></i>Immich</li><li class="sp"><i></i>Google Calendar</li><li class="sp"><i></i>Family Hub</li>
+      </ul>
+      <span class="wire" aria-hidden="true"></span><span class="node">Homeroom</span><span class="wire" aria-hidden="true"></span>
+      <span class="sp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg> The wall</span>
+    </div>
+    <h3 class="h2 studio-h rv">Built by a studio of agents.<br><span>One person at the gate.</span></h3>
+    <ol class="crew rv" style="--i:1" aria-label="How a change gets made">
+      <li><span class="sp">PM</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="gate" style="--i:1"><i></i>Owner approves</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="sp">Designer</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="sp">Architect</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="sp">Dev</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="sp">QE</span><span class="chev" aria-hidden="true">›</span></li>
+      <li><span class="gate" style="--i:6"><i></i>Owner merges</span></li>
+    </ol>
+  </section>
+
+  <!-- ═════════ Build log: the three newest chapters ═════════ -->
+  <section class="story" aria-labelledby="log-h">
+    <span class="lab rv">Build log</span>
+    <h2 class="h2 rv" id="log-h" style="--i:1">The story so far.</h2>
+    <ul class="log3">
+      <li class="rv" style="--i:1"><a class="logc pressable" href="/log/#the-rail"><div class="fit" data-mini="today" role="img" aria-label="The Today screen from the sample household's wall."></div><div class="d">November 1, 2026</div><h3>The photo steps aside, and the Rail opens</h3><div class="ref">homeroom #10, #18, #27, #33, #38, #39, #40</div></a></li>
+      <li class="rv" style="--i:2"><a class="logc pressable" href="/log/#real-data"><div class="fit" data-mini="week" role="img" aria-label="The Week screen from the sample household's wall."></div><div class="d">November 1, 2026</div><h3>Real data on the wall</h3><div class="ref">homeroom #25, #26, #35, #36</div></a></li>
+      <li class="rv" style="--i:3"><a class="logc pressable" href="/log/#curation"><div class="fit" data-mini="wall:meadow" role="img" aria-label="The Wall: a sample photo of green hills with the clock and what's next."></div><div class="d">November 1, 2026</div><h3>A photo frame that chooses well</h3><div class="ref">homeroom #12, #13, #15, #16</div></a></li>
+    </ul>
+    <a class="more-link pressable" href="/log/">The whole build log <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+  </section>
 </main>
+
+<footer class="foot"><span>Homeroom · built by Praveen Aravind with an agentic studio</span><span>homeroomdisplay.co</span></footer>
+
+<script src="/assets/hub.js" defer></script>
+<script src="/assets/landing.js" defer></script>
 </body>
 </html>

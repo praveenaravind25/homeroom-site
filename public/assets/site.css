@@ -1,0 +1,309 @@
+/* Homeroom site. Direction B, "The tablet, pinned" (homeroom-site #1).
+   Plain static CSS: no build step. Shared by / and /log/. */
+
+/* Schibsted Grotesk: the product's own self-hosted file (homeroom app/src/styles/fonts). */
+@font-face{font-family:"Schibsted Grotesk";src:url(/assets/fonts/schibsted-grotesk-latin-wght-normal.woff2) format("woff2");font-weight:400 900;font-style:normal;font-display:swap}
+
+/* Tokens copied 1:1 from praveenaravind25/homeroom app/src/styles/tokens.css v0.10. Not a new palette. */
+:root{
+  --c-chalk:#F7F4EE; --c-soft:#E0DACE; --c-brass:#EDC67C; --c-ground:#0A0908;
+  --c-rail-ground:#12100E; --c-s1:#1C1916; --c-s2:#25211D; --c-s3:#2F2A25;
+  --c-rail-soft:#CFC8BB; --c-mute:#8F887D; --c-rail-hair:rgb(247 244 238 / .1); --c-hairline:rgb(247 244 238 / .16);
+  --c-lamp:#F0D49B; --c-lamp-ink:#5B4B2C; --c-live:#E5534B;
+  --c-person-1:#D49A86; --c-person-2:#86B6A6; --c-person-3:#AFA0D6; --c-person-4:#B3BC85; --c-person-household:#9FB0C6;
+  --rail-tint:18%;
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --tracking-clock:-.055em; --tracking-label:.16em; --tracking-rail-label:.14em;
+  --r-card:22px; --r-tile:16px; --r-pill:999px; --r-chip:10px; --r-focus:10px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1);
+  --ease-out:cubic-bezier(.4,0,.2,1); --ease-drift:cubic-bezier(.37,0,.63,1);
+  --dur-rise:520ms; --dur-leave:280ms; --dur-overlay-out:320ms; --dur-overlay-in:360ms; --delay-overlay-in:380ms;
+  --dur-press:180ms; --press-scale:.97; --exit-to:translateY(10px);
+  --dur-yield:760ms; --dur-return-idle:1400ms; --delay-mat:560ms; --dur-mat:240ms; --dur-mat-out:120ms;
+  --rail-lead:220ms; --rail-stagger:50ms; --dur-indicator:320ms; --rail-rise-from:translateY(16px);
+  --dur-fill:180ms; --dur-ripple:40ms; --dur-tick:260ms; --tick-travel:10px;
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+  /* Site-only (not product tokens): the web type scale, and the Ken Burns cycle. */
+  --site-h1:clamp(52px,6.4vw,104px); --site-h2:clamp(40px,4.6vw,72px); --site-line:clamp(17px,1.45vw,21px);
+  --site-gutter:clamp(24px,5.6vw,80px);
+  --kb-cycle:34s;
+}
+/* The product's reduced-motion block: rises become short crossfades, the yield becomes a fade. */
+@media (prefers-reduced-motion:reduce){:root{
+  --rail-rise-from:none; --exit-to:none; --press-scale:1; --dur-rise:320ms; --dur-yield:0ms; --dur-return-idle:0ms;
+  --rail-lead:0ms; --rail-stagger:0ms; --dur-indicator:0ms; --dur-ripple:0ms; --tick-travel:0px; --delay-overlay-in:0ms}}
+
+*{box-sizing:border-box}
+html{background:var(--c-rail-ground);color:var(--c-chalk);font-family:var(--font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{margin:0;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:none}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:var(--r-focus)}
+.pressable{transition:transform var(--dur-press) var(--ease-press)}
+.pressable:active{transform:scale(var(--press-scale))}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ───────── Shared type ───────── */
+.lab{font-size:13px;letter-spacing:var(--tracking-rail-label);font-weight:650;color:var(--c-mute);text-transform:uppercase}
+.h1{font-size:var(--site-h1);font-weight:600;letter-spacing:-.04em;line-height:.98;margin:0}
+.h2{font-size:var(--site-h2);font-weight:600;letter-spacing:-.035em;line-height:1.02;margin:0}
+.line{font-size:var(--site-line);line-height:1.45;color:var(--c-rail-soft);margin:0;max-width:34ch}
+
+/* Scroll reveals: opacity always with a rise, on the settle curve. JS-only, so no-JS never hides content. */
+.js .rv{opacity:0;transform:var(--rail-rise-from);transition:opacity var(--dur-rise) var(--ease-settle),transform var(--dur-rise) var(--ease-settle);transition-delay:calc(var(--i,0) * 70ms)}
+.js .rv.in{opacity:1;transform:none}
+
+/* ───────── The Wall object: 1263×841, placed anywhere by one transform ───────── */
+.wall{position:absolute;left:0;top:0;width:1263px;height:841px;transform-origin:0 0;overflow:hidden;z-index:5;
+  transition:transform var(--dur-yield) var(--ease-settle),opacity 0ms;will-change:transform;pointer-events:none}
+.wall.snap{transition:none!important}
+.wall.fadeout{opacity:0;transition:opacity 320ms var(--ease-out)}
+.kb{position:absolute;inset:0;overflow:hidden}
+.kb img{width:100%;height:100%;object-fit:cover;display:block;animation:kb var(--kb-cycle) var(--ease-drift) infinite alternate;transform-origin:62% 58%}
+@keyframes kb{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.1) translate(-1.6%,-1.1%)}}
+.w-ov{position:absolute;inset:0;transition:opacity var(--dur-overlay-in) var(--ease-out) var(--delay-overlay-in),transform var(--dur-rise) var(--ease-settle) var(--delay-overlay-in)}
+.wall.yielded .w-ov{opacity:0;transform:var(--exit-to);transition:opacity var(--dur-overlay-out) var(--ease-out),transform var(--dur-overlay-out) var(--ease-out)}
+.w-ov .s{position:absolute;inset:0}
+.w-ov .abs{position:absolute;transition:opacity 300ms var(--ease-out)}
+.w-ov .s-bl{background:radial-gradient(120% 95% at 0% 100%,rgb(10 9 8 / .78) 0%,rgb(10 9 8 / .72) 30%,rgb(10 9 8 / 0) 66%)}
+.w-ov .s-tr{background:radial-gradient(45% 40% at 100% 0%,rgb(10 9 8 / .72) 0%,rgb(10 9 8 / 0) 100%)}
+.w-ov .s-tl{background:radial-gradient(40% 30% at 0% 0%,rgb(10 9 8 / .72) 0%,rgb(10 9 8 / 0) 100%)}
+.w-ov .s-br{background:radial-gradient(42% 42% at 100% 100%,rgb(10 9 8 / .74) 0%,rgb(10 9 8 / 0) 100%)}
+.w-temp{top:48px;right:56px;text-align:right}
+.w-temp b{display:block;font-size:52px;font-weight:500;line-height:1.05}
+.w-temp span{font-size:26px;color:var(--c-soft)}
+.w-time{left:56px;bottom:52px}
+.w-date{font-size:28px;color:var(--c-soft)}
+.w-clock{font-size:216px;line-height:.9;letter-spacing:var(--tracking-clock);font-weight:500;margin-left:-8px;font-variant-numeric:tabular-nums}
+.w-next{display:flex;align-items:baseline;gap:18px;margin-top:20px;white-space:nowrap}
+.w-next i{font-style:normal;font-size:22px;letter-spacing:var(--tracking-label);font-weight:650;color:var(--c-brass)}
+.w-next b{font-size:52px;font-weight:500}
+.w-next span{font-size:26px;color:var(--c-soft)}
+.w-cue{right:56px;bottom:56px;text-align:right}
+.w-cue b{display:block;font-size:34px;font-weight:550;letter-spacing:-.01em;line-height:1.15}
+.w-cue span{display:block;font-size:34px;font-weight:550;color:var(--c-soft);letter-spacing:-.01em;line-height:1.15}
+.w-cue svg{margin-top:14px;color:var(--c-soft);animation:bob 2.4s var(--ease-drift) infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}
+
+/* ───────── The Rail look (.rl): the product's screens, rebuilt from house-test.html ───────── */
+.rl{font-family:var(--font);color:var(--c-chalk);user-select:none}
+.rl .card{background:var(--c-s1);border-radius:var(--r-card);padding:20px 22px;overflow:hidden;min-height:0;position:relative}
+.rl .more{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;gap:10px}
+.rl .go{display:flex;align-items:center;gap:2px;font-size:14px;color:var(--c-rail-soft)}
+.rl .col{display:flex;flex-direction:column;gap:12px;min-height:0}
+.rl .row{display:flex;align-items:center;gap:12px}
+.av{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:700;color:var(--c-rail-ground);flex:none;line-height:1}
+.rl .ev{display:grid;grid-template-columns:78px 4px minmax(0,1fr);gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--c-rail-hair)}
+.rl .ev:last-child{border-bottom:0}
+.rl .ev .t{font-size:16px;color:var(--c-rail-soft);font-variant-numeric:tabular-nums}
+.rl .ev .bar{align-self:stretch;border-radius:4px}
+.rl .ev .ti{font-size:19px;font-weight:550}
+.rl .ev .sub{font-size:14px;color:var(--c-mute);margin-top:2px}
+.rl .ev.past .ti,.rl .ev.past .t{color:var(--c-mute)}
+.rl .ev.now .t{color:var(--c-brass);font-weight:650}
+.rl .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;background:var(--c-s2);font-size:15px;min-height:36px}
+.rl .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:var(--c-s2);font-size:15px;font-weight:600;min-height:40px;white-space:nowrap}
+.rl .pill.on{background:var(--c-chalk);color:var(--c-rail-ground)}
+.rl .chore{display:flex;align-items:center;gap:12px;padding:9px 0;min-height:44px}
+.rl .chk{width:28px;height:28px;border-radius:999px;box-shadow:inset 0 0 0 2px var(--c-s3);display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--c-rail-ground)}
+.rl .chore.done .chk{background:var(--c-rail-soft);box-shadow:none}
+.rl .chore.done .tx{color:var(--c-mute);text-decoration:line-through}
+.rl .tx{font-size:17px}
+.rl .h{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.rl .scene{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:10px;background:var(--c-s2);border-radius:var(--r-tile);padding:14px;min-height:82px;font-size:16px;font-weight:550;overflow:hidden}
+.rl .scene .on-l{position:absolute;inset:0;background:var(--c-chalk);color:var(--c-rail-ground);padding:14px;display:flex;flex-direction:column;justify-content:space-between;opacity:0;transition:opacity var(--dur-fill) var(--ease-out)}
+.rl .scene.pressed .on-l{opacity:1}
+.rl .dev{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:var(--c-s2);min-height:52px;overflow:hidden}
+.rl .dev .nm{font-size:16px;font-weight:550}
+.rl .dev .st{font-size:13px;color:var(--c-mute)}
+.rl .ic{width:34px;height:34px;border-radius:999px;background:var(--c-s3);display:flex;align-items:center;justify-content:center;flex:none}
+/* A light that's on: a lamp layer faded over the tile (opacity only, never an animated background). */
+.rl .lit{position:absolute;inset:0;background:var(--c-lamp);color:var(--c-rail-ground);display:flex;align-items:center;gap:12px;padding:inherit;opacity:0;transition:opacity var(--dur-fill) var(--ease-out);transition-delay:calc(var(--r,0) * var(--dur-ripple))}
+.rl .lit .ic{background:rgb(18 16 14 / .1)}
+.rl .lit .st{color:var(--c-lamp-ink)}
+.rl .is-on .lit{opacity:1}
+.rl .cam{position:relative;display:block;border-radius:16px;overflow:hidden;background:#000}
+.rl .cam img{display:block;width:100%;height:100%;object-fit:cover;filter:grayscale(.65) contrast(1.15) brightness(.8)}
+.rl .cam .tag{position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;background:rgb(0 0 0 / .55);padding:4px 8px;border-radius:6px}
+.rl .cam .tag i{width:7px;height:7px;border-radius:9px;background:var(--c-live);display:block;animation:live 1.6s var(--ease-drift) infinite alternate}
+@keyframes live{from{opacity:1}to{opacity:.35}}
+.rl .cam .nm{position:absolute;left:12px;bottom:10px;font-size:15px;font-weight:650;text-shadow:0 1px 6px #000}
+.rl .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--c-s2);font-size:16px;font-weight:600;min-height:44px;white-space:nowrap}
+.rl .btn.pri{background:var(--c-chalk);color:var(--c-rail-ground)}
+.rl .icn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:var(--c-s2);flex:none}
+.rl .badge{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;border-radius:9px;background:var(--c-brass);color:var(--c-rail-ground);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+/* Week: two grids on one track; next week slides in by one transform. */
+.rl .wk-view{overflow:hidden;height:653px;margin-top:16px}
+.rl .wk-track{display:flex;gap:24px;width:calc(1111px * 2 + 24px);height:100%;transition:transform 640ms var(--ease-settle)}
+.rl .wk-grid{width:1111px;flex:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;height:100%}
+.rl .day{padding:12px 10px;display:flex;flex-direction:column;gap:8px}
+.rl .day.today{box-shadow:inset 0 0 0 2px var(--c-brass)}
+.rl .day.today .lab,.rl .day.today .dnum{color:var(--c-brass)}
+.rl .day.past > *{opacity:.6}
+.rl .dnum{font-size:26px;font-weight:650;line-height:1}
+.rl .din{display:flex;align-items:center;gap:6px;font-size:13.5px;background:var(--c-s2);border-radius:var(--r-chip);padding:7px 9px;min-height:36px;color:var(--c-rail-soft);white-space:nowrap;overflow:hidden}
+.rl .din.no{color:var(--c-mute)}
+.rl .wev{border-radius:var(--r-chip);padding:7px 9px;background:color-mix(in srgb,var(--pc) var(--rail-tint),var(--c-s1));box-shadow:inset 3px 0 0 var(--pc)}
+.rl .wev .wt{font-size:12.5px;color:var(--c-rail-soft)}
+.rl .wev.now .wt{color:var(--c-brass);font-weight:700}
+.rl .wev .wn{font-size:14.5px;font-weight:600;line-height:1.2}
+.rl .none{font-size:13.5px;color:var(--c-mute);padding:6px 2px}
+.rl.wk2 .wk-track{transform:translateX(calc(-1111px - 24px))}
+
+/* Rising: replayed by toggling .play. The final state is the default, so nothing is ever stuck hidden. */
+@keyframes rise{from{opacity:0;transform:var(--rail-rise-from)}to{opacity:1;transform:none}}
+.rl.play .on-scr .rise{animation:rise var(--dur-rise) var(--ease-settle) both;animation-delay:calc(var(--rail-lead) + var(--i,0) * var(--rail-stagger))}
+@keyframes tick{from{opacity:0;transform:translateY(var(--tick-travel))}to{opacity:1;transform:none}}
+.tick{animation:tick var(--dur-tick) var(--ease-settle) both}
+
+/* ───────── The hub: the product at 1263×841 ───────── */
+.fit{position:relative;overflow:hidden}
+.fit > .hub,.fit > .wall{position:absolute;left:0;top:0;transform-origin:0 0}
+.hub{width:1263px;height:841px;background:var(--c-rail-ground);overflow:hidden}
+.hub .h-rail{position:absolute;left:0;top:0;bottom:0;width:104px;box-shadow:1px 0 0 var(--c-rail-hair);padding-top:20px;transition:opacity var(--dur-rise) var(--ease-out),transform var(--dur-rise) var(--ease-settle)}
+.hub .h-ind{position:absolute;left:10px;top:20px;width:84px;height:66px;border-radius:16px;background:var(--c-s2);transform:translateY(calc(var(--ni,0) * 70px));transition:transform var(--dur-indicator) var(--ease-settle)}
+.hub .h-nav{position:relative;margin:0 0 4px 10px;width:84px;height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--c-rail-soft)}
+.hub .h-nav.cur{color:var(--c-chalk)}
+.hub .h-photos{position:absolute;left:10px;top:755px;width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--c-rail-soft)}
+.thumb{display:block;width:72px;height:48px;border-radius:10px;overflow:hidden;background:var(--c-s2);opacity:0;transition:opacity var(--dur-mat-out) var(--ease-out)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.shown{opacity:1;transition:opacity var(--dur-mat) var(--ease-out)}
+.hub .h-head{position:absolute;left:128px;right:24px;top:22px;height:60px;display:flex;align-items:center;gap:14px}
+.hub .h-title{font-size:28px;font-weight:650;letter-spacing:-.01em}
+.hub .h-sum{font-size:15px;color:var(--c-rail-soft)}
+.hub .h-content{position:absolute;left:128px;top:100px;width:1111px;height:717px}
+.scr{position:absolute;inset:0;visibility:hidden}
+.scr.on-scr{visibility:visible}
+/* Asleep: the photo is the hero; the Rail waits underneath, invisible. */
+.hub .h-head,.hub .h-content{transition:opacity 0ms,transform 0ms}
+.hub.asleep .h-rail{opacity:0;transform:translateX(-8px)}
+.hub.asleep .h-head,.hub.asleep .h-content{opacity:0;transform:translateY(8px);transition:opacity var(--dur-leave) var(--ease-out),transform var(--dur-leave) var(--ease-out)}
+
+/* ═════════ The pinned tablet (landing hero) ═════════ */
+.stick{position:relative}
+.stick > .stage{position:sticky;top:0;height:100vh;overflow:hidden}
+.b-pin{height:800vh}
+.b-pin .stage{display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:clamp(24px,4vw,64px);padding:0 clamp(24px,4.4vw,64px);align-items:center}
+.b-caps{position:relative;height:340px}
+.b-cap{position:absolute;left:0;right:0;top:0;opacity:0;transform:translateY(16px);transition:opacity var(--dur-leave) var(--ease-out),transform var(--dur-leave) var(--ease-out);pointer-events:none}
+.b-cap.on{opacity:1;transform:none;transition:opacity var(--dur-rise) var(--ease-settle) 120ms,transform var(--dur-rise) var(--ease-settle) 120ms}
+.b-cap .lab{display:block;margin-bottom:20px}
+.b-cap .h2{font-size:clamp(40px,4.4vw,64px)}
+.b-cap .line{margin-top:20px}
+.b-dots{position:absolute;left:0;bottom:-40px;display:flex;gap:10px}
+.b-dots i{width:7px;height:7px;border-radius:9px;background:var(--c-s3);transition:transform var(--dur-press) var(--ease-press)}
+.b-dots i.now{background:var(--c-brass);transform:scale(1.3)}
+.b-left{opacity:0;transition:opacity 400ms var(--ease-out)}
+.b-on .b-left{opacity:1}
+.device{position:relative;justify-self:center;padding:16px;background:#070605;border-radius:30px;box-shadow:0 50px 120px rgb(0 0 0 / .6),0 0 0 1px rgb(247 244 238 / .09),inset 0 1px 0 rgb(247 244 238 / .08);opacity:0;transform:scale(1.04);transition:opacity 500ms var(--ease-out) 260ms,transform var(--dur-yield) var(--ease-settle)}
+.b-on .device{opacity:1;transform:none}
+.device .fit{border-radius:6px}
+.b-lamp{position:absolute;left:50%;bottom:-30%;width:120vw;height:70vh;transform:translateX(-30%);background:radial-gradient(50% 50% at 50% 50%,rgb(240 212 155 / .10),transparent 70%);pointer-events:none}
+
+/* The top bar: a real link to the build log, over the Wall's top-left scrim. Steps back once the tablet appears. */
+.top{position:absolute;left:clamp(24px,4.4vw,64px);top:28px;z-index:6;display:flex;gap:12px;align-items:center;transition:opacity 300ms var(--ease-out)}
+.top a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;margin-left:-10px}
+.top .brand{font-size:clamp(20px,1.8vw,26px);font-weight:650;letter-spacing:-.01em}
+.top .nav{font-size:clamp(16px,1.4vw,20px);font-weight:550;color:var(--c-soft)}
+.b-on .top{opacity:0;pointer-events:none}
+.b-on .top:focus-within{opacity:1;pointer-events:auto}
+.phone-cue{display:none}
+
+/* ───────── Story (Who, Why, How, Build log) ───────── */
+.story{max-width:1280px;margin:0 auto;padding:clamp(96px,16vh,180px) var(--site-gutter)}
+.story + .story{padding-top:0}
+.story .lab{display:block;margin-bottom:22px}
+.story .line{margin-top:20px}
+.who3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,48px);margin:72px 0 0;padding:0;list-style:none}
+.who3 > li{border-top:1px solid var(--c-hairline);padding-top:28px}
+.who3 .faces{display:flex;gap:8px;height:56px;align-items:center}
+.who3 p{font-size:clamp(26px,2.6vw,40px);font-weight:600;letter-spacing:-.025em;line-height:1.08;margin:24px 0 0}
+.pending{margin-top:44px;border-radius:var(--r-card);background:var(--c-s1);box-shadow:inset 0 0 0 1.5px var(--c-s3);padding:36px 40px;display:flex;justify-content:space-between;align-items:center;gap:20px;max-width:900px;flex-wrap:wrap}
+.pending b{font-size:clamp(22px,2vw,30px);font-weight:600;letter-spacing:-.015em}
+.pending span{font-size:15px;color:var(--c-mute)}
+.flow{display:flex;align-items:center;gap:14px;margin-top:56px;flex-wrap:wrap}
+.src{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.sp{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:var(--r-pill);background:var(--c-s2);font-size:16px;font-weight:600;min-height:44px;width:max-content}
+.sp i{width:8px;height:8px;border-radius:9px;background:var(--c-mute)}
+.wire{width:clamp(30px,6vw,90px);height:1px;background:var(--c-hairline);position:relative}
+.wire::after{content:"";position:absolute;right:0;top:-3px;border:3.5px solid transparent;border-left:5px solid var(--c-hairline)}
+.node{padding:16px 26px;border-radius:var(--r-pill);background:var(--c-chalk);color:var(--c-rail-ground);font-size:20px;font-weight:700}
+.studio-h{font-size:clamp(30px,3vw,44px);margin-top:120px}
+.studio-h span{color:var(--c-rail-soft)}
+.crew{display:flex;align-items:center;gap:10px;margin:40px 0 0;padding:0;list-style:none;flex-wrap:wrap}
+.crew li{display:inline-flex;align-items:center;gap:10px}
+.crew .sp{background:var(--c-s1);box-shadow:inset 0 0 0 1px var(--c-rail-hair)}
+/* The crew strip's only brass: the owner's two gates. */
+.gate{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:650;color:var(--c-brass);padding:0 6px;min-height:44px}
+.gate i{width:12px;height:12px;border-radius:9px;background:var(--c-brass)}
+.js .gate i{transform:scale(.3);transition:transform 420ms var(--ease-press);transition-delay:calc(var(--i,0) * 70ms + 200ms)}
+.js .in .gate i{transform:none}
+.chev{color:var(--c-mute);display:inline-flex}
+.log3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:56px 0 0;padding:0;list-style:none}
+.logc{display:block;border-radius:14px;padding-bottom:10px}
+.logc .fit,.entry .fit{border-radius:14px;background:var(--c-s1);box-shadow:inset 0 0 0 1px var(--c-rail-hair);aspect-ratio:1263/841}
+.logc .fit{transition:transform 260ms var(--ease-press)}
+@media (hover:hover){.logc:hover .fit{transform:translateY(-3px)}}
+.logc .d{font-size:14px;color:var(--c-mute);margin-top:18px}
+.logc h3{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:6px 0 0;line-height:1.2}
+.logc .ref{font-size:13px;color:var(--c-mute);margin-top:8px}
+.more-link{display:inline-flex;align-items:center;gap:4px;margin-top:40px;font-size:17px;font-weight:600;color:var(--c-rail-soft);min-height:44px}
+.foot{position:relative;max-width:1280px;margin:0 auto;padding:40px var(--site-gutter) 110px;display:flex;justify-content:space-between;gap:20px;font-size:14px;color:var(--c-mute);flex-wrap:wrap;align-items:center}
+.foot::before{content:"";position:absolute;left:var(--site-gutter);right:var(--site-gutter);top:0;border-top:1px solid var(--c-rail-hair)}
+.foot a{display:inline-flex;align-items:center;min-height:44px;color:var(--c-rail-soft)}
+
+/* ───────── Build log page ───────── */
+.log-top{max-width:1280px;margin:0 auto;padding:28px var(--site-gutter) 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.log-top a{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-size:17px;font-weight:550;color:var(--c-rail-soft)}
+.log-top .brand{font-size:22px;font-weight:650;color:var(--c-chalk)}
+.log-head{max-width:1280px;margin:0 auto;padding:clamp(72px,12vh,140px) var(--site-gutter) clamp(48px,8vh,96px)}
+.log-head .lab{display:block;margin-bottom:22px}
+.log-head .line{margin-top:22px}
+.entries{max-width:1280px;margin:0 auto;padding:0 var(--site-gutter) clamp(72px,12vh,140px);list-style:none}
+.entry{display:grid;grid-template-columns:200px minmax(0,1fr);gap:clamp(24px,4vw,64px);border-top:1px solid var(--c-rail-hair);padding:48px 0 72px;scroll-margin-top:24px}
+.entry time{position:sticky;top:32px;align-self:start;font-size:15px;color:var(--c-mute)}
+.entry .body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,3.4vw,56px);align-items:start}
+.entry h2{font-size:clamp(28px,2.6vw,40px);font-weight:600;letter-spacing:-.025em;line-height:1.08;margin:0}
+.entry p{font-size:17px;line-height:1.55;color:var(--c-rail-soft);margin:18px 0 0;max-width:52ch}
+.entry .ref{font-size:13px;color:var(--c-mute);margin-top:20px;letter-spacing:.02em}
+
+/* Phone width: must not break (a dedicated responsive polish pass follows). */
+@media (max-width:820px){
+  .who3,.log3{grid-template-columns:1fr}
+  .b-pin .stage{grid-template-columns:1fr;align-content:center;gap:28px}
+  .b-caps{height:220px}
+  .b-dots{top:-32px;bottom:auto}
+  .b-cap .h2{font-size:34px}
+  .w-cue{display:none}
+  /* The Wall's overlay is drawn for 1263px; cover-cropped on a phone it would read as broken.
+     Until the tablet appears, the overlay steps back and a phone-sized cue takes its place. */
+  .js .stage:not(.b-on) .w-time,.js .stage:not(.b-on) .w-temp{opacity:0}
+  .phone-cue{display:block;position:absolute;left:24px;right:24px;bottom:56px;z-index:6;margin:0;font-size:32px;font-weight:550;letter-spacing:-.01em;line-height:1.15;transition:opacity 300ms var(--ease-out)}
+  .phone-cue::before{content:"";position:absolute;inset:-180px -24px -56px;z-index:-1;background:linear-gradient(to top,rgb(10 9 8 / .78),rgb(10 9 8 / .72) 45%,rgb(10 9 8 / 0))}
+  .phone-cue b{display:block;font-weight:inherit}
+  .phone-cue span{display:block;color:var(--c-soft)}
+  .b-on .phone-cue{opacity:0}
+  .flow{flex-direction:column;align-items:flex-start}
+  .wire{width:1px;height:28px;margin-left:28px}
+  .wire::after{right:-3px;top:auto;bottom:-4px;border:3.5px solid transparent;border-top:5px solid var(--c-hairline)}
+  .pending{padding:28px 24px}
+  .entry{grid-template-columns:1fr;gap:14px;padding:32px 0 48px}
+  .entry time{position:static}
+  .entry .body{grid-template-columns:1fr}
+}
+
+/* ───────── No JS: a still Wall hero, then the page continues ───────── */
+.no-js .b-pin{height:auto}
+.no-js .b-pin .stage{position:relative;display:flex;flex-direction:column;height:auto;padding:0;overflow:visible}
+.no-js .b-pin .wall{position:relative;order:-1;width:100%;height:100vh;transform:none}
+.no-js .device,.no-js .b-lamp,.no-js .b-dots,.no-js .phone-cue{display:none}
+.no-js .b-left{opacity:1;max-width:1280px;margin:0 auto;padding:clamp(72px,12vh,140px) var(--site-gutter) 0}
+.no-js .b-caps{height:auto}
+.no-js .b-cap{position:static;opacity:1;transform:none;margin-bottom:72px}
+@media (max-width:820px){.no-js .w-temp,.no-js .w-next{display:none}.no-js .w-clock{font-size:96px}.no-js .w-time{left:24px;bottom:32px}}
+
+@media (prefers-reduced-motion:reduce){
+  .kb img,.w-cue svg,.rl .cam .tag i{animation:none}
+  .logc .fit{transition:none}
+  @media (hover:hover){.logc:hover .fit{transform:none}}
+}
