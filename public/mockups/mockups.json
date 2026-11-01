@@ -82,6 +82,14 @@
    "shots": 8
   },
   {
+   "slug": "issue-17",
+   "title": "Rail shell + Today: touch-to-engage interactive UI (UC-10/11)",
+   "ref": "Product #17",
+   "date": "2026-10-31",
+   "thumb": "ambient.png",
+   "shots": 5
+  },
+  {
    "slug": "issue-14",
    "title": "Few more states and refined flow",
    "ref": "Product #14",
