@@ -1,0 +1,19 @@
+# Build log: validate content/log/ and confirm the rendered pages in public/ are current.
+# Verify only: deploy is unchanged (Cloudflare runs `npx wrangler deploy` on ./public, no build step).
+name: Build log
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-log.mjs --check
+      - run: node --test scripts/build-log.test.mjs
