@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, initial-scale=1">
+<title>Homeroom #71 · Cameras + full view (design direction)</title>
+<!-- Mockup only. The app self-hosts Schibsted Grotesk (I-18); this standalone file borrows it from Google Fonts. -->
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<style>
+/* ── House tokens: verbatim values from app/src/styles/tokens.css v0.11 (the subset this surface uses) ── */
+:root{
+  --c-chalk:#F7F4EE; --c-brass:#EDC67C; --c-ground:#0A0908;
+  --c-rail-ground:#12100E; --c-s1:#1C1916; --c-s2:#25211D; --c-s3:#2F2A25;
+  --c-rail-soft:#CFC8BB; --c-mute:#8F887D; --c-rail-hair:rgb(247 244 238 / .1);
+  --c-lamp:#F0D49B; --c-lamp-ink:#5B4B2C; --c-live:#E5534B;
+  --c-person-1:#D49A86; --c-person-2:#86B6A6; --c-person-3:#AFA0D6; --c-person-4:#B3BC85;
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --rail-fs-label:13px; --rail-fs-meta:14px; --rail-fs-body:16px; --rail-fs-item:19px; --rail-fs-heading:24px; --rail-fs-title:28px;
+  --tracking-rail-label:.14em;
+  --r-card:22px; --r-tile:16px; --r-pill:999px; --r-chip:10px;
+  --rail-w:104px; --rail-content-x:128px; --rail-content-y:100px; --rail-content-w:1111px; --rail-content-h:717px; --rail-gap:16px;
+  --rail-thumb-w:72px; --rail-thumb-h:48px; --rail-thumb-r:10px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1); --ease-out:cubic-bezier(.4,0,.2,1);
+  --dur-rise:520ms; --dur-leave:280ms; --dur-press:180ms; --press-scale:.97; --rail-stagger:50ms;
+  --rail-rise-from:translateY(16px); --dur-frame:400ms; --dur-hold:1200ms; --dur-retract:220ms; --hold-scale:.985;
+  --tick-travel:10px; --dur-fill:180ms;
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+  /* Proposed for #71 (new tokens, one line each in tokens.css + tokens.json) */
+  --dur-open:560ms;           /* the tile becomes the screen */
+  --open-from:.34;            /* ...starting near the tile's own size */
+  --cam-deck-h:131px;         /* 841 − a 16:9 frame at full width (1263 × 9/16 = 710) */
+  --cam-thumb-w:136px; --cam-thumb-h:77px;
+}
+@media (prefers-reduced-motion: reduce){
+  :root{ --rail-rise-from:none; --press-scale:1; --rail-stagger:0ms; --hold-scale:1; --tick-travel:0px; --open-from:1; --dur-open:320ms; }
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:#000;font-family:var(--font);color:var(--c-chalk);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
+button:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+#hub{position:relative;width:1263px;height:841px;overflow:hidden;background:var(--c-rail-ground)}
+
+/* ── Shell (real geometry: Nav.svelte, Header.svelte) ── */
+.rail{position:absolute;left:0;top:0;bottom:0;width:var(--rail-w);display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px 0 16px;box-shadow:1px 0 0 var(--c-rail-hair)}
+.item{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;padding:10px 0;border-radius:var(--r-tile);font-size:var(--rail-fs-label);font-weight:600;color:var(--c-rail-soft)}
+.item.on{background:var(--c-s2);color:var(--c-chalk)}
+.item svg{width:24px;height:24px}
+.spacer{flex:1}
+.thumb{width:var(--rail-thumb-w);height:var(--rail-thumb-h);border-radius:var(--rail-thumb-r);object-fit:cover;display:block}
+.head{position:absolute;left:var(--rail-content-x);right:24px;top:22px;height:60px;display:flex;align-items:center;gap:14px}
+.titles{flex:1;min-width:0}
+.title{font-size:var(--rail-fs-title);font-weight:650;line-height:1.15;letter-spacing:-.01em}
+.summary{display:flex;gap:8px;align-items:center;font-size:var(--rail-fs-body);color:var(--c-rail-soft)}
+.summary .sep{color:var(--c-mute)}
+.ring{width:7px;height:7px;border-radius:99px;box-shadow:inset 0 0 0 1.5px currentColor;display:inline-block;flex:none}
+.who{display:flex;gap:6px;padding:0 7px;min-height:48px;align-items:center}
+.av{width:34px;height:34px;border-radius:99px;display:grid;place-items:center;font-size:var(--rail-fs-label);font-weight:700;color:var(--c-rail-ground)}
+.av.away{background:none!important;box-shadow:inset 0 0 0 2px var(--p);color:var(--p)}
+.icn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:99px;background:var(--c-s2)}
+.add{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:99px;background:var(--c-chalk);color:var(--c-rail-ground);font-size:var(--rail-fs-body);font-weight:600}
+svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ── Cameras screen: the content box, the prototype's 1fr / 1fr / .8fr grid ── */
+.content{position:absolute;left:var(--rail-content-x);top:var(--rail-content-y);width:var(--rail-content-w);height:var(--rail-content-h);
+  display:grid;grid-template-columns:1fr 1fr .8fr;grid-template-rows:1fr 1fr;gap:var(--rail-gap)}
+.rise{animation:rise var(--dur-rise) var(--ease-settle) both;animation-delay:calc(var(--i,0) * var(--rail-stagger))}
+@keyframes rise{from{opacity:0;transform:var(--rail-rise-from)}to{opacity:1;transform:none}}
+.still .rise,.still .open,.still .deck-in{animation:none!important}
+
+.cam{position:relative;display:block;width:100%;height:100%;border-radius:var(--r-tile);overflow:hidden;background:var(--c-s2);isolation:isolate;transition:transform var(--dur-press) var(--ease-out)}
+.cam:active{transform:scale(var(--press-scale))}
+.cam img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(.65)}
+.cam.big{grid-row:span 2}
+.chip{position:absolute;z-index:2;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--r-pill);background:var(--c-s1);font-size:var(--rail-fs-label);font-weight:650;letter-spacing:var(--tracking-rail-label);text-transform:uppercase;white-space:nowrap}
+.chip.tl{left:10px;top:10px}
+.chip.name{left:10px;bottom:10px;text-transform:none;letter-spacing:0;font-size:var(--rail-fs-body);font-weight:600;padding:6px 12px}
+.chip.asof{color:var(--c-rail-soft)}
+.dot{width:7px;height:7px;border-radius:99px;background:var(--c-live);display:inline-block;flex:none}
+.cam.big .chip.name{font-size:var(--rail-fs-item);padding:8px 14px;left:14px;bottom:14px}
+
+.card{background:var(--c-s1);border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;min-height:0;grid-row:span 2}
+.lab{font-size:var(--rail-fs-label);letter-spacing:var(--tracking-rail-label);font-weight:650;color:var(--c-mute);text-transform:uppercase}
+.events{flex:1;overflow:hidden;margin-top:8px}
+.evt{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center;width:100%;padding:12px 0;border-bottom:1px solid var(--c-rail-hair);min-height:64px;border-radius:12px;transition:transform var(--dur-press) var(--ease-out)}
+.evt:active{transform:scale(var(--press-scale))}
+.evt:last-child{border-bottom:0}
+.evt img{width:96px;height:60px;object-fit:cover;border-radius:var(--r-chip);filter:grayscale(.65);display:block}
+.evt .t{font-size:var(--rail-fs-body);font-weight:600;line-height:1.25}
+.evt .s{font-size:var(--rail-fs-meta);color:var(--c-mute);margin-top:3px}
+.evt.first .s b{color:var(--c-brass);font-weight:650}
+.foot{font-size:var(--rail-fs-meta);color:var(--c-mute);padding-top:12px;border-top:1px solid var(--c-rail-hair);line-height:1.4}
+.quiet{flex:1;display:flex;align-items:center;justify-content:center;color:var(--c-rail-soft);font-size:var(--rail-fs-body);text-align:center}
+
+/* ── Full view (frame:'full', inset 0 over the whole shell) ── */
+.view{position:absolute;inset:0;z-index:20;background:var(--c-ground);display:none}
+.view.show{display:block}
+.view.open{animation:open var(--dur-open) var(--ease-settle) both}
+@keyframes open{0%{opacity:0;transform:scale(var(--open-from))}35%{opacity:1}100%{opacity:1;transform:none}}
+.view.closing{animation:close var(--dur-leave) var(--ease-out) both}
+@keyframes close{to{opacity:0;transform:scale(calc(var(--open-from) + .2))}}
+
+.frame{position:absolute;left:0;top:0;width:1263px;height:calc(841px - var(--cam-deck-h));overflow:hidden;background:#000}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(.65);transition:opacity var(--dur-frame) var(--ease-out)}
+.frame img.off{opacity:0}
+.thumbs{position:absolute;right:20px;top:20px;display:flex;gap:10px;z-index:2}
+.tb{position:relative;width:var(--cam-thumb-w);height:var(--cam-thumb-h);border-radius:12px;overflow:hidden;background:var(--c-s2);transition:transform var(--dur-press) var(--ease-press)}
+.tb:active{transform:scale(.95)}
+.tb img{width:100%;height:100%;object-fit:cover;filter:grayscale(.65);display:block}
+.tb span{position:absolute;left:6px;bottom:6px;padding:3px 8px;border-radius:99px;background:var(--c-s1);font-size:var(--rail-fs-label);font-weight:600}
+.tb.cur{box-shadow:0 0 0 3px var(--c-chalk)}
+.tb.dim::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 1px var(--c-rail-hair);border-radius:12px}
+
+.deck{position:absolute;left:0;right:0;bottom:0;height:var(--cam-deck-h);display:flex;align-items:center;gap:24px;padding:0 24px;background:var(--c-rail-ground);box-shadow:0 -1px 0 var(--c-rail-hair)}
+.deck-in{animation:rise var(--dur-rise) var(--ease-settle) both;animation-delay:calc(220ms + var(--i,0) * var(--rail-stagger))}
+.back{width:56px;height:56px;border-radius:99px;background:var(--c-s2);display:grid;place-items:center;transition:transform var(--dur-press) var(--ease-press)}
+.back:active{transform:scale(.92)}
+.ident{flex:1;min-width:0}
+.ident .n{font-size:var(--rail-fs-heading);font-weight:650;letter-spacing:-.01em;line-height:1.2;overflow:hidden;height:29px}
+.ident .n span{display:block}
+.ident .st{display:flex;align-items:center;gap:8px;font-size:var(--rail-fs-meta);color:var(--c-rail-soft);margin-top:4px}
+.ident .st .lv{font-size:var(--rail-fs-label);font-weight:700;letter-spacing:var(--tracking-rail-label);color:var(--c-chalk)}
+.acts{display:flex;gap:10px}
+/* Action tiles: Home's EntryTile md / LightTile vocabulary, one shared trust pattern (ADR-0009) */
+.act{position:relative;display:flex;align-items:center;gap:12px;width:232px;min-height:68px;padding:10px 14px;border-radius:var(--r-tile);background:var(--c-s2);overflow:hidden;transition:transform var(--dur-press) var(--ease-out)}
+.act:active{transform:scale(var(--press-scale))}
+.act .ic{width:38px;height:38px;border-radius:99px;background:var(--c-s3);display:grid;place-items:center;color:var(--c-rail-soft);flex:none}
+.act .nm{font-size:var(--rail-fs-body);font-weight:600;white-space:nowrap}
+.act .sb{font-size:var(--rail-fs-meta);color:var(--c-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:160px}
+.act .bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--c-brass);transform:scaleX(0);transform-origin:0 50%;transition:transform var(--dur-retract) var(--ease-out)}
+.act.holding{transform:scale(var(--hold-scale))}
+.act.holding .bar{transform:scaleX(1);transition:transform var(--dur-hold) linear}
+.act.mid .bar{transform:scaleX(.62);transition:none}
+.act.attention{box-shadow:inset 0 0 0 2px var(--c-brass)}
+.act.attention .sb,.act.attention .ic{color:var(--c-brass)}
+.act.said .sb{color:var(--c-chalk)}
+.act.lit{background:var(--c-lamp);color:var(--c-rail-ground)}
+.act.lit .sb{color:var(--c-lamp-ink)}
+.act.lit .ic{background:rgb(18 16 14 / .1);color:var(--c-rail-ground)}
+.act.off{background:none;box-shadow:inset 0 0 0 1px var(--c-rail-hair);cursor:default}
+.act.off .ic{background:none;box-shadow:inset 0 0 0 1px var(--c-rail-hair);color:var(--c-mute)}
+.act.off .nm{color:var(--c-rail-soft)}
+.act.off:active{transform:none}
+.act.talking{background:var(--c-chalk);color:var(--c-rail-ground)}
+.act.talking .sb{color:var(--c-rail-ground)}
+.act.talking .ic{background:rgb(18 16 14 / .1);color:var(--c-rail-ground)}
+.meter{display:inline-flex;gap:3px;align-items:center;height:18px;margin-left:auto}
+.meter i{width:3px;height:18px;border-radius:3px;background:currentColor;transform-origin:50% 50%;animation:lvl 900ms var(--ease-out) infinite alternate}
+@keyframes lvl{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+.still .meter i{animation:none}
+
+/* Option B: full bleed (prototype-faithful) */
+.view.bleed .frame{height:841px}
+.view.bleed .deck{background:none;box-shadow:none;height:auto;bottom:24px;padding:0 24px;justify-content:center}
+.view.bleed .deck .ident{display:none}
+.view.bleed .bl-top{display:flex}
+.bl-top{display:none;position:absolute;left:24px;top:20px;z-index:2;gap:12px;align-items:center}
+.bl-top .nmchip{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:99px;background:var(--c-s1);font-size:var(--rail-fs-item);font-weight:650}
+.view.bleed .back.deck-back{display:none}
+.view.bleed .act{background:var(--c-s1)}
+
+/* What if: talk by touching the person */
+.touch{position:absolute;z-index:3;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:99px;box-shadow:0 0 0 3px var(--c-chalk),0 0 0 6px rgb(10 9 8 / .5);pointer-events:none;display:none}
+.touch.on{display:block;animation:ring 1100ms var(--ease-out) infinite}
+.still .touch.on{animation:none;transform:scale(1)}
+.still .touch.two{transform:scale(1.6);opacity:.45}
+.touch.two{animation-delay:550ms}
+@keyframes ring{from{transform:scale(.4);opacity:1}to{transform:scale(1.8);opacity:0}}
+.talkchip{position:absolute;z-index:3;left:50%;top:22px;transform:translateX(-50%);display:none;align-items:center;gap:10px;padding:10px 18px;border-radius:99px;background:var(--c-chalk);color:var(--c-rail-ground);font-size:var(--rail-fs-body);font-weight:650}
+.talkchip.on{display:inline-flex}
+
+/* the hint chip that rises when a hold is let go early */
+.hint{position:absolute;z-index:4;bottom:calc(var(--cam-deck-h) + 12px);padding:8px 14px;border-radius:99px;background:var(--c-s1);font-size:var(--rail-fs-meta);color:var(--c-chalk);opacity:0;transform:translateY(8px);transition:opacity var(--dur-fill) var(--ease-out),transform var(--dur-rise) var(--ease-settle);pointer-events:none}
+.hint.on{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div id="hub">
+  <nav class="rail" aria-label="Screens" id="rail"></nav>
+  <header class="head">
+    <div class="titles"><h1 class="title">Cameras</h1><p class="summary" id="summary"></p></div>
+    <div class="who" aria-label="3 of 4 home">
+      <span class="av" style="background:var(--c-person-1)">A</span><span class="av" style="background:var(--c-person-2)">B</span>
+      <span class="av" style="background:var(--c-person-3)">C</span><span class="av away" style="--p:var(--c-person-4)">D</span>
+    </div>
+    <span class="icn" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg></span>
+    <button class="add"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14"/></svg>Add</button>
+  </header>
+  <main class="content" id="content"></main>
+
+  <section class="view" id="view" role="dialog" aria-modal="true" aria-label="Camera">
+    <div class="frame" id="frame">
+      <img id="fa" alt=""><img id="fb" class="off" alt="">
+      <div class="bl-top"><button class="back" data-act="close" aria-label="Back to Cameras"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M15 6l-6 6 6 6"/></svg></button><span class="nmchip" id="blname"></span></div>
+      <div class="thumbs" id="thumbs"></div>
+      <span class="touch" id="t1" style="left:640px;top:360px"></span><span class="touch two" id="t2" style="left:640px;top:360px"></span>
+      <span class="talkchip" id="talkchip"><span class="meter"><i></i><i style="animation-delay:-300ms"></i><i style="animation-delay:-600ms"></i><i style="animation-delay:-150ms"></i></span>Talking · let go to stop</span>
+    </div>
+    <div class="deck" id="deck">
+      <button class="back deck-back deck-in" data-act="close" aria-label="Back to Cameras"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="ident deck-in" style="--i:1"><div class="n" id="vname"></div><div class="st" id="vstat"></div></div>
+      <div class="acts" id="acts"></div>
+    </div>
+    <span class="hint" id="hint">Hold to unlock</span>
+  </section>
+</div>
+
+<script>
+const I = {
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  week:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  meals:'<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8a2 2 0 0 1-2 2M17 21V3c-2.5 1.5-3 5-3 8h3"/>',
+  list:'<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  chores:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>',
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  cam:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.6-1.7"/>',
+  garage:'<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 16.5h10"/>',
+  bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+};
+const ic = (k,s=20) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}">${I[k]}</svg>`;
+
+// Placeholder imagery only (picsum), never household photos.
+const CAMS = [
+  {k:'front', n:'Front door', img:'https://picsum.photos/seed/hr71-porch/900/1300', wide:'https://picsum.photos/seed/hr71-porch/1600/900', rel:['lock','porch']},
+  {k:'drive', n:'Driveway',   img:'https://picsum.photos/seed/hr71-drive/900/600',  wide:'https://picsum.photos/seed/hr71-drive/1600/900', rel:['garage','porch']},
+  {k:'back',  n:'Backyard',   img:'https://picsum.photos/seed/hr71-yard/900/600',   wide:'https://picsum.photos/seed/hr71-yard/1600/900',  rel:['porch']},
+];
+const EVENTS = [
+  {cam:'front', t:'Package delivered', at:'9:12 AM'},
+  {cam:'back',  t:'Motion by the shed', at:'8:40 AM'},
+  {cam:'drive', t:'Car left',           at:'8:21 AM'},
+  {cam:'front', t:'Doorbell',           at:'7:58 AM'},
+  {cam:'drive', t:'Car arrived',        at:'7:02 AM'},
+];
+
+// State. Each hash is one reachable state; clicks animate, hashes land still (for screenshots).
+const S = {cam:null, offline:null, live:true, lock:'locked', garage:'closed', porch:false, hold:null, cue:null, talk:false, bleed:false, quiet:false};
+const STATES = {
+  'cameras':        {},
+  'cameras-offline':{offline:'drive'},
+  'cameras-quiet':  {quiet:true},
+  'view':           {cam:'front'},
+  'view-snapshot':  {cam:'front', live:false},
+  'view-offline':   {cam:'drive', offline:'drive'},
+  'hold':           {cam:'front', hold:'mid'},
+  'unlocked':       {cam:'front', lock:'unlocked', cue:{k:'lock', t:'Unlocked · tap to lock', said:false}},
+  'failed':         {cam:'front', cue:{k:'lock', t:'Didn’t unlock · try again', said:true}},
+  'driveway':       {cam:'drive', porch:true},
+  'bleed':          {cam:'front', bleed:true},
+  'talk':           {cam:'front', talk:true},
+};
+
+function rail(){
+  const items=[['cal','Today'],['week','Week'],['meals','Meals'],['list','Lists'],['chores','Chores'],['home','Home'],['cam','Cameras']];
+  document.getElementById('rail').innerHTML = items.map(([k,l])=>`<button class="item${k==='cam'?' on':''}" ${k==='cam'?'aria-current="page"':''}>${ic(k,24)}${l}</button>`).join('')
+   + `<span class="spacer"></span><button class="item" style="padding:0" aria-label="Back to photos"><img class="thumb" src="https://picsum.photos/seed/hr71-wall/300/200" alt="">Photos</button>`;
+}
+const camBy = k => CAMS.find(c=>c.k===k);
+
+function tile(c, cls, i){
+  const off = S.offline===c.k;
+  const tag = off ? `<span class="chip tl asof"><span class="ring"></span>As of 10:31</span>` : `<span class="chip tl"><span class="dot"></span>Live</span>`;
+  return `<button class="cam ${cls} rise" style="--i:${i}" data-act="open" data-cam="${c.k}" aria-label="${c.n} camera. Open full screen"><img src="${c.img}" alt="">${tag}<span class="chip name">${c.n}</span></button>`;
+}
+function grid(){
+  const sum = document.getElementById('summary');
+  sum.innerHTML = S.offline ? `<span>2 of 3 cameras</span><span class="sep">·</span><span style="display:inline-flex;gap:6px;align-items:center;font-size:14px"><span class="ring"></span>Driveway as of 10:31</span>` : `<span>3 cameras${S.quiet?'':' · 5 things today'}</span>`;
+  const rows = S.quiet ? `<div class="quiet">Nothing from the cameras today.</div>` :
+    `<div class="events">${EVENTS.map((e,n)=>{const c=camBy(e.cam);return `<button class="evt${n===0?' first':''}" data-act="open" data-cam="${c.k}"><img src="${c.img}" alt=""><span><div class="t">${e.t}</div><div class="s">${c.n} · ${e.at}</div></span></button>`}).join('')}</div>`;
+  document.getElementById('content').innerHTML =
+    tile(CAMS[0],'big',0) + tile(CAMS[1],'',1) +
+    `<section class="card rise" style="--i:2"><h2 class="lab">Today</h2>${rows}<p class="foot">When the doorbell rings, its camera takes over the whole screen.</p></section>` +
+    tile(CAMS[2],'',1);
+  // the third column card spans two rows; keep the small tiles stacked in column 2
+  const g=document.getElementById('content'); g.children[1].style.gridColumn='2'; g.children[3].style.gridColumn='2'; g.children[3].style.gridRow='2'; g.children[2].style.gridColumn='3'; g.children[2].style.gridRow='1 / span 2';
+}
+
+function actTile(kind){
+  const cue = S.cue && S.cue.k===kind ? S.cue : null;
+  if (kind==='talk'){
+    if (S.talk) return `<button class="act talking" data-act="talk"><span class="ic">${ic('mic')}</span><span><span class="nm">Talking</span><span class="sb">Let go to stop</span></span></button>`;
+    return `<button class="act off" aria-disabled="true" data-act="talkoff"><span class="ic">${ic('mic')}</span><span><span class="nm">Hold to talk</span><span class="sb">Not set up yet</span></span></button>`;
+  }
+  if (kind==='lock'){
+    const un = S.lock==='unlocked';
+    const sb = cue ? cue.t : un ? 'Unlocked · tap to lock' : 'Locked · hold to unlock';
+    const cls = ['act', un?'attention':'', S.hold==='mid'?'holding mid':'', cue&&cue.said?'said':''].join(' ');
+    return `<button class="${cls}" data-act="lock" aria-label="Door lock: ${sb}"><span class="ic">${ic(un?'unlock':'lock')}</span><span><span class="nm">Door lock</span><span class="sb" aria-live="polite">${S.hold==='mid'?'Keep holding to unlock':sb}</span></span><span class="bar"></span></button>`;
+  }
+  if (kind==='garage'){
+    const open = S.garage==='open';
+    return `<button class="act ${open?'attention':''}" data-act="garage"><span class="ic">${ic('garage')}</span><span><span class="nm">Garage</span><span class="sb">${open?'Open · tap to close':'Closed · hold to open'}</span></span><span class="bar"></span></button>`;
+  }
+  if (kind==='porch'){
+    return `<button class="act ${S.porch?'lit':''}" data-act="porch"><span class="ic">${ic('bulb')}</span><span><span class="nm">Porch light</span><span class="sb">${S.porch?'On · tap for off':'Off · tap for on'}</span></span></button>`;
+  }
+}
+
+function view(anim){
+  const v = document.getElementById('view');
+  if (!S.cam){ v.className='view'; return; }
+  const c = camBy(S.cam), off = S.offline===c.k;
+  v.className = 'view show' + (S.bleed?' bleed':'') + (anim?' open':'');
+  const fa=document.getElementById('fa'); fa.src=c.wide; fa.className='';
+  document.getElementById('fb').className='off';
+  document.getElementById('vname').innerHTML = `<span>${c.n}</span>`;
+  document.getElementById('blname').innerHTML = (S.live&&!off?'<span class="dot"></span>':'')+c.n;
+  document.getElementById('vstat').innerHTML = off
+    ? `<span class="ring"></span>As of 10:31 · the camera isn’t answering`
+    : S.live ? `<span class="dot"></span><span class="lv">Live</span><span>10:42:16</span>`
+             : `<span>Still · refreshes every 2 s · 10:42:16</span>`;
+  document.getElementById('thumbs').innerHTML = CAMS.map(x=>`<button class="tb ${x.k===c.k?'cur':''}" data-act="switch" data-cam="${x.k}" aria-label="${x.n}" ${x.k===c.k?'aria-current="true"':''}><img src="${x.img}" alt=""><span>${x.n}</span></button>`).join('');
+  const acts = ['talk', ...c.rel];
+  document.getElementById('acts').innerHTML = acts.map(actTile).join('');
+  [...document.querySelectorAll('#acts .act')].forEach((el,n)=>{el.classList.add('deck-in'); el.style.setProperty('--i', n+2);});
+  const talking = S.talk;
+  document.getElementById('t1').classList.toggle('on',talking); document.getElementById('t2').classList.toggle('on',talking);
+  document.getElementById('talkchip').classList.toggle('on',talking);
+}
+
+function render(anim){ grid(); view(anim); }
+
+function land(){
+  const h = location.hash.slice(1) || 'cameras';
+  Object.assign(S,{cam:null,offline:null,live:true,lock:'locked',garage:'closed',porch:false,hold:null,cue:null,talk:false,bleed:false,quiet:false}, STATES[h]||{});
+  document.body.classList.add('still'); render(false);
+  if (!/still/.test(location.search)) requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.remove('still')));
+}
+window.addEventListener('hashchange', land);
+
+// ── Interaction: the tile becomes the screen; Back lets go into it ──
+let origin = null;
+function openFrom(el, k){
+  const r = el.getBoundingClientRect(), hub = document.getElementById('hub').getBoundingClientRect();
+  const v = document.getElementById('view');
+  origin = k;
+  v.style.transformOrigin = `${r.left - hub.left + r.width/2}px ${r.top - hub.top + r.height/2}px`;
+  Object.assign(S,{cam:k,hold:null,cue:null,talk:false});
+  view(true);
+}
+function close(){
+  const v = document.getElementById('view');
+  const t = document.querySelector(`.cam[data-cam="${S.cam}"]`);
+  if (t){ const r=t.getBoundingClientRect(), hub=document.getElementById('hub').getBoundingClientRect(); v.style.transformOrigin=`${r.left-hub.left+r.width/2}px ${r.top-hub.top+r.height/2}px`; }
+  v.classList.remove('open'); v.classList.add('closing');
+  setTimeout(()=>{ S.cam=null; S.talk=false; v.className='view'; history.replaceState(null,'','#cameras'); }, 280);
+}
+function switchTo(k){
+  if (k===S.cam) return;
+  const c=camBy(k), fa=document.getElementById('fa'), fb=document.getElementById('fb');
+  const [shown, hidden] = fa.classList.contains('off') ? [fb,fa] : [fa,fb];
+  hidden.onload = ()=>{ hidden.classList.remove('off'); shown.classList.add('off'); };
+  hidden.src = c.wide;
+  S.cam=k; S.cue=null; S.hold=null;
+  // everything but the frame re-renders in place; the name ticks over
+  const keepA=fa.src, keepB=fb.src, aOff=fa.className, bOff=fb.className;
+  view(false); fa.src=keepA; fb.src=keepB; fa.className=aOff; fb.className=bOff; hidden.src=c.wide;
+  const n=document.querySelector('#vname span'); n.animate([{opacity:0,transform:'translateY(var(--tick-travel))'},{opacity:1,transform:'none'}].map(f=>({...f,transform:f.transform.replace('var(--tick-travel)','10px')})),{duration:260,easing:'cubic-bezier(.22,1,.36,1)'});
+}
+
+let holdT=null;
+function hint(el, text){
+  const h=document.getElementById('hint'); h.textContent=text;
+  const r=el.getBoundingClientRect(), hub=document.getElementById('hub').getBoundingClientRect();
+  h.style.left=(r.left-hub.left)+'px'; h.classList.add('on'); clearTimeout(h._t); h._t=setTimeout(()=>h.classList.remove('on'),2000);
+}
+document.addEventListener('pointerdown', e=>{
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const a=b.dataset.act;
+  if ((a==='lock' && S.lock==='locked') || (a==='garage' && S.garage==='closed')){
+    S.cue=null; b.classList.add('holding'); b.querySelector('.sb').textContent = a==='lock'?'Keep holding to unlock':'Keep holding to open';
+    holdT=setTimeout(()=>{ holdT=null; if(a==='lock') S.lock='unlocked'; else S.garage='open';
+      view(false); const nb=document.querySelector(`[data-act="${a}"]`); nb.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:420,easing:'cubic-bezier(.34,1.56,.64,1)'}); }, 1200);
+  }
+  if (a==='talk' || (e.target.closest('.frame') && !e.target.closest('button') && S.cam)){
+    // what-if: hold the person to talk
+    if (!e.target.closest('.frame')) return;
+    const fr=document.getElementById('frame').getBoundingClientRect();
+    ['t1','t2'].forEach(id=>{const t=document.getElementById(id); t.style.left=(e.clientX-fr.left)+'px'; t.style.top=(e.clientY-fr.top)+'px';});
+    S.talk=true; view(false);
+  }
+});
+const release = e=>{
+  if (holdT){ clearTimeout(holdT); holdT=null; const b=document.querySelector('.act.holding'); if(b){ b.classList.remove('holding'); view(false); hint(b, b.dataset.act==='lock'?'Hold to unlock':'Hold to open'); } }
+  if (S.talk && location.hash!=='#talk'){ S.talk=false; view(false); }
+};
+document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const a=b.dataset.act;
+  if (a==='open') openFrom(b.closest('.evt') ? document.querySelector(`.cam[data-cam="${b.dataset.cam}"]`) : b, b.dataset.cam);
+  if (a==='close') close();
+  if (a==='switch') switchTo(b.dataset.cam);
+  if (a==='porch'){ S.porch=!S.porch; view(false); }
+  if (a==='lock' && S.lock==='unlocked' && !holdT){ S.lock='locked'; S.cue=null; view(false); }
+  if (a==='garage' && S.garage==='open'){ S.garage='closed'; view(false); }
+  if (a==='talkoff') hint(b,'Talk needs the doorbell’s own app for now');
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && S.cam) close(); });
+
+rail(); land();
+</script>
+</body>
+</html>
