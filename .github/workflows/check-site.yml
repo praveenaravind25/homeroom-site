@@ -1,0 +1,28 @@
+# Privacy check (issue #3): no real household data on a public page.
+# Runs on every PR to main. Make "check-site" a required status check in branch protection.
+# CI has no real household config, so the deny-list rule is off here and the pattern rules
+# (emails, private IPs, Home Assistant entity ids) run alone; the output says so.
+name: check-site
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+      - name: Privacy check
+        run: npm run check:site
+      - name: Self-test (each rule fires, output stays masked)
+        run: npm test

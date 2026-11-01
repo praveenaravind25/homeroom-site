@@ -1,0 +1,4 @@
+# The product checkout `npm run shots` makes, and its run config. Never commit.
+.cache/
+node_modules/
+.DS_Store
