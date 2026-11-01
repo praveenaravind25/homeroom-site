@@ -1,0 +1,34 @@
+{
+  "_comment": "entities: fake Home Assistant entity ids from the product's sample-data build (config/homeroom.example.json, e2e/*.json, fixtures/*.json). vocabulary: words the real-config deny-list never treats as terms: generic household words that identify no one, and the owner's own name, which the site may show as its author (projects/site.md). Never add a family member's name, a place, an address, a device name or an id.",
+  "entities": [
+    "calendar.household",
+    "calendar.member_a",
+    "calendar.member_b",
+    "climate.hallway",
+    "cover.garage_door",
+    "light.living_room",
+    "lock.front_door",
+    "person.member_a",
+    "person.member_b",
+    "scene.evening",
+    "todo.family_hub_chores",
+    "todo.family_reminders",
+    "todo.household_todo",
+    "todo.meal_plan",
+    "todo.member_a_chores",
+    "todo.member_b_chores",
+    "todo.shopping_list",
+    "weather.home"
+  ],
+  "vocabulary": [
+    "Praveen", "praveen",
+    "Chores", "chores", "Chore Bin", "Groceries", "groceries", "Shopping", "shopping", "Reminders", "reminders",
+    "Errands", "errands", "Packing", "Homework", "homework", "Meal plan", "Meals",
+    "breakfast", "dinner", "Dinner",
+    "Kitchen", "kitchen", "Living room", "Family room", "Dining room", "Bedroom", "Bathroom", "Hallway", "Garage",
+    "Office", "office", "Backyard", "Front door", "Back door", "Porch", "Basement", "Laundry", "Upstairs", "Downstairs",
+    "Evening lights", "Evening", "Movie night", "Bedtime", "Leaving", "All off", "Thermostat", "Doorbell", "Driveway",
+    "At work", "At school", "At home", "Away",
+    "document", "receipt", "screenshot", "whiteboard", "spread"
+  ]
+}

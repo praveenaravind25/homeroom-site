@@ -1,0 +1,14 @@
+{
+  "name": "homeroom-site",
+  "private": true,
+  "type": "module",
+  "description": "The public showcase for Homeroom. Static: public/ is what deploys.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "check:site": "node scripts/check-site.mjs",
+    "test": "node --test scripts/check-site.test.mjs",
+    "shots": "node scripts/shots.mjs"
+  }
+}
