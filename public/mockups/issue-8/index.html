@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, height=841, initial-scale=1">
+<title>Homeroom · #8 Active mode: the photo steps back, Today rises</title>
+<!--
+  Design mockup for issue #8 (UC-10/11). NOT production code.
+  Tokens are copied verbatim from app/src/styles/tokens.css (provisional, direction B),
+  plus the few new ones this issue proposes (marked NEW).
+  States: #ambient #active #bright #busy #empty #stale #print #reduced
+  Keys: m = simulated motion (wake) · Esc = dismiss · r = review bar
+-->
+<style>
+:root {
+  /* from app/src/styles/tokens.css */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-mode: 720ms;            /* CHANGED 760 → 720: photo move */
+  --dur-press: 180ms;
+  --stagger: 40ms;              /* CHANGED 55 → 40: content settled by ~840ms */
+  --size-clock: 168px;
+  --size-glance: 50px;
+  --size-floor: 22px;
+  --chalk: #f7f4ee;
+  --soft: #e0dace;
+  --brass: #edc67c;
+  --scrim-rgb: 10, 9, 8;
+  --mat: #171411;
+  --font-sans: system-ui, 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --focus-ring: 0 0 0 3px var(--mat), 0 0 0 6px var(--brass);
+
+  /* NEW for #8 */
+  --dur-rise: 520ms;            /* each Today piece */
+  --dur-leave: 280ms;           /* Today on exit: all at once, no reverse stagger */
+  --step-back: translateY(-7px) scale(0.955); /* the photo steps back onto the mat */
+  --dim-active: 0.66;           /* whole-photo dim floor (contrast ≥ 4.5:1 even on white) */
+  --size-title: 40px;           /* event title, AC ≥ 36 */
+  --size-body: 28px;            /* time, condition, chores, AC ≥ 28 */
+  --size-meta: 24px;            /* location, hi/lo, notes (label tier) */
+  --hair: rgba(247, 244, 238, 0.16);
+  --past: #b8b2a8;              /* past events: dimmed but ≥ 4.5:1 worst case */
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --step-back: none; --dur-mode: 240ms; --dur-rise: 240ms; --stagger: 0ms; }
+  .rise { transform: none !important; }
+}
+.rm { --step-back: none; --dur-mode: 240ms; --dur-rise: 240ms; --stagger: 0ms; }
+.rm .rise { transform: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1263px; height: 841px; overflow: hidden; background: #000; }
+body { color: var(--chalk); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; user-select: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus { outline: none; }
+:focus-visible { box-shadow: var(--focus-ring); border-radius: 12px; }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+.hub { position: relative; width: 1263px; height: 841px; overflow: hidden; background: var(--mat); }
+
+/* ---------- Photo layer (one element, never reloaded: AC8) ---------- */
+.stack { position: absolute; inset: 0; transform-origin: 50% 50%;
+  transition: transform var(--dur-mode) var(--ease-settle); will-change: transform; }
+.stack img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Static print edge: only its opacity animates. */
+.stack .edge { position: absolute; inset: 0; opacity: 0;
+  box-shadow: 0 0 0 1px rgba(247,244,238,.10), 0 18px 50px rgba(0,0,0,.55);
+  transition: opacity var(--dur-mode) var(--ease-out); }
+/* The dim: a flat floor plus a left-weighted wash under the schedule. Static gradient, opacity-animated. */
+.stack .dim { position: absolute; inset: 0; opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(var(--scrim-rgb), .22) 0, rgba(var(--scrim-rgb), .14) 760px, rgba(var(--scrim-rgb), 0) 1000px),
+    rgba(var(--scrim-rgb), var(--dim-active));
+  transition: opacity var(--dur-mode) var(--ease-out); }
+[data-mode="active"] .stack { transform: var(--step-back); transition-delay: 40ms; }
+[data-mode="active"] .stack .edge,
+[data-mode="active"] .stack .dim { opacity: 1; }
+/* The dim LEADS: fast-front curve so it's ~80% in before any text arrives. */
+[data-mode="active"] .stack .dim { transition: opacity 480ms var(--ease-settle); }
+
+/* ---------- Ambient overlay (as shipped in Overlay.svelte) ---------- */
+.overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  transition: opacity 360ms var(--ease-settle) 380ms, transform 520ms var(--ease-settle) 380ms; }
+[data-mode="active"] .overlay { opacity: 0; transform: translateY(10px);
+  transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out); }
+.scrim { position: absolute; inset: 0;
+  background:
+    linear-gradient(to top, rgba(var(--scrim-rgb), .8) 0px, rgba(var(--scrim-rgb), .72) 300px, rgba(var(--scrim-rgb), 0) 560px),
+    linear-gradient(to bottom, rgba(var(--scrim-rgb), .35) 0, rgba(var(--scrim-rgb), 0) 140px); }
+.caption { position: absolute; left: 56px; bottom: 276px; font-size: 24px; color: var(--soft); }
+.caption::before { content: ''; display: inline-block; width: 28px; height: 1px; background: currentColor; vertical-align: 7px; margin-right: 12px; opacity: .7; }
+.clockwrap { position: absolute; left: 56px; bottom: 42px; }
+.eyebrow { font-size: var(--size-floor); font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--soft); }
+.clock { font-size: var(--size-clock); font-weight: 500; line-height: .85; letter-spacing: -.05em; margin: 22px 0 0 -8px; }
+.period { font-size: 36px; letter-spacing: .02em; margin-left: 14px; color: var(--soft); }
+.right { position: absolute; right: 56px; bottom: 50px; width: 520px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+.wx { font-size: 26px; color: var(--soft); }
+.wx b { font-size: 52px; font-weight: 500; letter-spacing: -.03em; color: var(--chalk); margin-right: 12px; }
+.label { font-size: var(--size-floor); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); }
+.right .label { margin-top: 28px; }
+.next { font-size: var(--size-glance); font-weight: 500; line-height: 1.04; letter-spacing: -.02em; margin-top: 12px; }
+.place { font-size: 26px; color: var(--soft); margin-top: 10px; }
+
+.wake { position: absolute; inset: 0; z-index: 2; border-radius: 0; }
+.wake:focus-visible { box-shadow: inset 0 0 0 6px var(--brass); border-radius: 0; }
+[data-mode="active"] .wake { pointer-events: none; }
+
+/* ---------- Today ---------- */
+.today { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+[data-mode="active"] .today { pointer-events: auto; }
+.rise { opacity: 0; transform: translateY(14px);
+  transition: opacity var(--dur-leave) var(--ease-out), transform var(--dur-leave) var(--ease-out); }
+[data-mode="active"] .rise { opacity: 1; transform: none;
+  transition: opacity var(--dur-rise) var(--ease-settle), transform var(--dur-rise) var(--ease-settle);
+  transition-delay: calc(160ms + min(var(--i, 0), 4) * var(--stagger)); }
+
+.head { position: absolute; left: 56px; right: 56px; top: 46px; display: flex; align-items: baseline; gap: 22px; }
+.bell { font-size: var(--size-floor); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); }
+.bell i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--brass); margin-right: 12px; vertical-align: 2px; }
+.date { font-size: 30px; font-weight: 500; letter-spacing: -.01em; }
+.hclock { margin-left: auto; font-size: 30px; font-weight: 500; color: var(--soft); }
+
+.schedule { position: absolute; left: 56px; top: 116px; width: 676px; list-style: none; }
+.allday { display: flex; align-items: center; gap: 18px; padding: 0 0 18px; }
+.chip { font-size: var(--size-floor); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--soft);
+  padding: 7px 12px 6px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px rgba(247,244,238,.34); white-space: nowrap; }
+.allday .t { font-size: 36px; font-weight: 500; letter-spacing: -.015em; }
+.row { position: relative; display: grid; grid-template-columns: 148px 1fr; gap: 0 20px; padding: 17px 0 18px; border-top: 1px solid var(--hair); }
+.time { font-size: var(--size-body); font-weight: 500; line-height: 1.45; color: var(--soft); }
+.what { font-size: var(--size-title); font-weight: 500; line-height: 1.1; letter-spacing: -.015em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.what small { display: block; font-size: var(--size-meta); font-weight: 400; letter-spacing: 0; color: var(--soft); margin-top: 5px; }
+.past .time, .past .what, .past .what small { color: var(--past); } /* fixed tone, not opacity: holds ≥ 4.5:1 on a white photo */
+.live::before { content: ''; position: absolute; left: -22px; top: 20px; bottom: 21px; width: 4px; border-radius: 2px; background: var(--brass); }
+.live .time { color: var(--brass); }
+.live .time small { display: block; width: max-content; margin-top: 4px; font-size: var(--size-floor); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; line-height: 1; padding: 5px 9px 4px; border-radius: 7px; background: var(--brass); color: #1b1712; }
+.earlier .what { font-size: var(--size-body); color: var(--soft); font-weight: 400; line-height: 1.45; opacity: .75; }
+.earlier .time { font-size: var(--size-floor); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; line-height: 1.85; opacity: .75; }
+.more { list-style: none; padding-top: 14px; font-size: var(--size-meta); color: var(--soft); border-top: 1px solid var(--hair); }
+.empty { padding: 30px 0 0; border-top: 1px solid var(--hair); }
+.empty .what { white-space: normal; }
+.empty small { font-size: var(--size-body) !important; margin-top: 12px !important; }
+.stale { display: inline-flex; align-items: center; gap: 8px; font-size: var(--size-floor); color: var(--soft); opacity: .8; white-space: nowrap; }
+.stale::before { content: ''; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid currentColor; }
+.stale-row { list-style: none; padding-top: 12px; }
+
+.card { position: absolute; left: 788px; top: 116px; width: 419px; padding: 28px 30px 30px; border-radius: 20px;
+  background: rgba(var(--scrim-rgb), .34); box-shadow: inset 0 0 0 1px rgba(247,244,238,.14);
+  display: flex; flex-direction: column; gap: 22px; }
+.block + .block { padding-top: 22px; border-top: 1px solid var(--hair); }
+.big { font-size: 72px; font-weight: 500; letter-spacing: -.04em; line-height: 1; margin-top: 10px; display: flex; align-items: baseline; gap: 16px; }
+.big span { font-size: var(--size-body); font-weight: 400; letter-spacing: 0; color: var(--soft); }
+.mid { font-size: 34px; font-weight: 500; line-height: 1.12; letter-spacing: -.01em; margin-top: 10px; }
+.sub { font-size: var(--size-meta); line-height: 1.3; color: var(--soft); margin-top: 8px; }
+.body { font-size: var(--size-body); line-height: 1.25; margin-top: 10px; }
+.block .stale { margin-top: 10px; }
+
+.back { position: absolute; right: 56px; bottom: 44px; height: 68px; padding: 0 28px 0 12px; border-radius: 34px;
+  display: flex; align-items: center; gap: 16px; font-size: 26px; font-weight: 500;
+  background: rgba(var(--scrim-rgb), .42); box-shadow: inset 0 0 0 1px rgba(247,244,238,.24); }
+.back img { width: 66px; height: 44px; object-fit: cover; border-radius: 22px; box-shadow: 0 0 0 1px rgba(247,244,238,.3); }
+.back:focus-visible { box-shadow: inset 0 0 0 1px rgba(247,244,238,.24), var(--focus-ring); border-radius: 34px; }
+.back:active { transform: scale(.96); transition: transform var(--dur-press) var(--ease-out) !important; }
+
+/* ---------- WHAT IF: "Pin the print" variant ---------- */
+.frame { display: none; position: absolute; left: 804px; top: 108px; width: 403px; height: 312px; z-index: 0;
+  background: #efe9dd; border-radius: 3px; box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.35);
+  opacity: 0; transform: translateY(10px) rotate(-0.6deg); transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out); }
+.frame p { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; color: #3a342c; font-size: 22px; font-weight: 500; }
+[data-variant="print"] .frame { display: block; }
+[data-variant="print"][data-mode="active"] .frame { opacity: 1; transform: rotate(-0.6deg);
+  transition: opacity 360ms var(--ease-settle) 360ms, transform 600ms var(--ease-settle) 300ms; }
+[data-variant="print"] .stack { transform-origin: 0 0; z-index: 1; }
+[data-variant="print"][data-mode="active"] .stack { transform: translate(816px, 120px) rotate(-0.6deg) scale(0.3001); }
+[data-variant="print"][data-mode="active"] .stack .dim,
+[data-variant="print"][data-mode="active"] .stack .edge { opacity: 0; }
+[data-variant="print"] .overlay { z-index: 2; }
+[data-variant="print"] .wake { z-index: 3; }
+[data-variant="print"] .today { z-index: 4; }
+[data-variant="print"] .card { left: 804px; width: 403px; top: 452px; background: none; box-shadow: none; padding: 0; gap: 16px; }
+[data-variant="print"] .card [data-chores],
+[data-variant="print"] .wxsub { display: none; }
+[data-variant="print"] .big { font-size: 60px; margin-top: 6px; }
+[data-variant="print"] .block + .block { padding-top: 16px; }
+.vign { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity var(--dur-mode) var(--ease-out);
+  background: radial-gradient(120% 90% at 30% 40%, rgba(237,198,124,.06), rgba(0,0,0,0) 60%); }
+[data-variant="print"][data-mode="active"] .vign { opacity: 1; }
+
+/* ---------- Review bar (hidden by default; press r) ---------- */
+.review { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 50; display: none; gap: 6px;
+  padding: 6px; border-radius: 14px; background: rgba(0,0,0,.75); font-size: 14px; }
+.review.on { display: flex; }
+.review a { color: var(--soft); text-decoration: none; padding: 6px 10px; border-radius: 9px; }
+.review a.cur { background: var(--brass); color: #1b1712; }
+</style>
+</head>
+<body>
+<div class="hub" id="hub" data-mode="ambient" data-variant="step">
+  <div class="vign"></div>
+  <div class="frame" aria-hidden="true"><p>3 years ago today</p></div>
+  <div class="stack" aria-hidden="true">
+    <img id="photo" alt="" src="">
+    <div class="dim"></div>
+    <div class="edge"></div>
+  </div>
+
+  <div class="overlay">
+    <div class="scrim"></div>
+    <p class="caption">3 years ago today</p>
+    <div class="clockwrap">
+      <p class="eyebrow">Saturday, October 31</p>
+      <p class="clock num">4:12<span class="period">PM</span></p>
+    </div>
+    <div class="right">
+      <p class="wx"><b class="num">58°</b>Partly cloudy</p>
+      <p class="label">Next</p>
+      <p class="next">Trick-or-treat</p>
+      <p class="place">6:30 PM · Maple St loop</p>
+    </div>
+  </div>
+
+  <button class="wake" id="wake" aria-label="Show today"></button>
+
+  <section class="today" id="today" aria-label="Today" aria-hidden="true" inert>
+    <header class="head rise" style="--i:0">
+      <p class="bell"><i aria-hidden="true"></i>Today</p>
+      <p class="date">Saturday, October 31</p>
+      <p class="hclock num">4:12 PM</p>
+    </header>
+    <ol class="schedule" id="schedule" aria-label="Schedule"></ol>
+    <aside class="card rise" style="--i:2" id="card"></aside>
+    <button class="back rise" style="--i:4" id="back"><img id="thumb" alt="">Back to photos</button>
+  </section>
+</div>
+
+<nav class="review" id="review">
+  <a href="#ambient">ambient</a><a href="#active">active</a><a href="#bright">bright photo</a><a href="#busy">busy day</a>
+  <a href="#empty">empty</a><a href="#stale">stale</a><a href="#print">what if: print</a><a href="#reduced">reduced motion</a>
+</nav>
+
+<script>
+const PHOTOS = {
+  dusk:   'https://picsum.photos/id/1015/1600/1066',
+  bright: 'https://picsum.photos/id/1036/1600/1066'
+};
+const DATA = {
+  normal: {
+    allday: ['Halloween'],
+    events: [
+      { t: '9:00 AM', title: 'Farmers market', loc: 'Elm Park', past: true },
+      { t: '1:30 PM', title: 'Swim lesson', loc: 'Community pool', past: true },
+      { t: '4:00 PM', title: 'Pumpkin carving', loc: 'Kitchen table · until 5:00', live: 'Now' },
+      { t: '6:30 PM', title: 'Trick-or-treat', loc: 'Maple St loop' },
+      { t: '8:00 PM', title: 'Movie night' }
+    ]
+  },
+  busy: {
+    allday: ['Halloween'],
+    earlier: ['Farmers market', 'Swim lesson', '1 more'],
+    events: [
+      { t: '4:00 PM', title: 'Pumpkin carving', loc: 'Kitchen table · until 5:00', live: 'Now' },
+      { t: '5:15 PM', title: 'Costume pickup', loc: 'Party store, 3rd Ave' },
+      { t: '6:30 PM', title: 'Trick-or-treat', loc: 'Maple St loop' },
+      { t: '7:45 PM', title: 'Neighbours drop by' }
+    ],
+    more: '+ 2 more tonight, from 8:30 PM'
+  },
+  empty: { allday: [], events: [] }
+};
+const $ = id => document.getElementById(id);
+const hub = $('hub'), photo = $('photo'), thumb = $('thumb'), today = $('today'), sched = $('schedule'), card = $('card'), back = $('back');
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+
+function render(kind, stale) {
+  const d = DATA[kind];
+  let i = 1, h = '';
+  for (const a of d.allday) h += `<li class="allday rise" style="--i:${i++}"><span class="chip">All day</span><span class="t">${esc(a)}</span></li>`;
+  if (d.earlier) h += `<li class="row earlier rise" style="--i:${i++}"><span class="time">Earlier</span><span class="what">${d.earlier.map(esc).join(' · ')}</span></li>`;
+  for (const e of d.events) {
+    h += `<li class="row rise${e.past ? ' past' : ''}${e.live ? ' live' : ''}" style="--i:${i++}">
+      <span class="time num">${e.t}${e.live ? `<small>${e.live}</small>` : ''}</span>
+      <span class="what">${esc(e.title)}${e.loc ? `<small>${esc(e.loc)}</small>` : ''}</span></li>`;
+  }
+  if (!d.events.length && !d.allday.length)
+    h += `<li class="empty rise" style="--i:1"><span class="what">Nothing on the calendar today<small>The afternoon's yours.</small></span></li>`;
+  if (d.more) h += `<li class="more rise" style="--i:${i++}">${d.more}</li>`;
+  if (stale) h += `<li class="stale-row rise" style="--i:${i++}"><span class="stale">as of 3:40 PM</span></li>`;
+  sched.innerHTML = h;
+
+  const st = stale ? '<span class="stale">as of 3:40 PM</span>' : '';
+  card.innerHTML = `
+    <div class="block">
+      <p class="label">Weather</p>
+      <p class="big num">58°<span>Partly cloudy</span></p>
+      <p class="sub num wxsub">High 62° · Low 47°</p>${st}
+    </div>
+    <div class="block">
+      <p class="label">Dinner</p>
+      <p class="mid">Butternut squash soup</p>
+      <p class="sub">Grilled cheese on the side</p>${st}
+    </div>
+    <div class="block" data-chores>
+      <p class="label">Chores</p>
+      <p class="body">2 left<span class="sub" style="margin-left:12px">Recycling · Water plants</span></p>
+    </div>`;
+}
+
+function setMode(m) {
+  hub.dataset.mode = m;
+  const on = m === 'active';
+  today.inert = !on; today.setAttribute('aria-hidden', String(!on));
+  $('wake').tabIndex = on ? -1 : 0;
+  if (on && kbd) back.focus({ preventScroll: true }); // ring only for keyboard wakes; touch wakes stay clean
+}
+
+function apply() {
+  const s = (location.hash || '#ambient').slice(1);
+  render(s === 'busy' ? 'busy' : s === 'empty' ? 'empty' : 'normal', s === 'stale');
+  const src = s === 'bright' ? PHOTOS.bright : PHOTOS.dusk;
+  if (photo.getAttribute('src') !== src) { photo.src = src; thumb.src = src; }
+  hub.dataset.variant = s === 'print' ? 'print' : 'step';
+  hub.classList.toggle('rm', s === 'reduced');
+  document.querySelectorAll('.review a').forEach(a => a.classList.toggle('cur', a.getAttribute('href') === '#' + s));
+  setMode(s === 'ambient' ? 'ambient' : 'active');
+}
+
+/* Mirrors the mode machine: touch/motion wakes, explicit dismiss, idle return (?idleSec=). */
+let kbd = false; addEventListener('pointerdown', () => kbd = false, true);
+let idleT; const idleSec = Number(new URLSearchParams(location.search).get('idleSec') || 300);
+const bump = () => { clearTimeout(idleT); idleT = setTimeout(() => setMode('ambient'), idleSec * 1000); };
+$('wake').addEventListener('click', () => { setMode('active'); bump(); });
+back.addEventListener('click', () => setMode('ambient'));
+today.addEventListener('pointerdown', bump); // a tap on Today does nothing except reset the clock
+addEventListener('keydown', e => {
+  kbd = true;
+  if (e.key === 'm') { setMode('active'); bump(); }
+  if (e.key === 'Escape') setMode('ambient');
+  if (e.key === 'r') $('review').classList.toggle('on');
+});
+addEventListener('hashchange', apply);
+apply();
+</script>
+</body>
+</html>

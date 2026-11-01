@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, height=841, initial-scale=1">
+<title>Homeroom · Ambient presentation v2: spreads + drift (issue #5)</title>
+<!-- Review only. Production self-hosts Schibsted Grotesk (local-first). Placeholder photos: picsum. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..700;1,400..600&display=block" rel="stylesheet">
+<style>
+/* =====================================================================
+   HOMEROOM TOKENS · v0.1 · B "Full Bleed" (verbatim from issue #3)
+   + issue #5 v2 presentation tokens (marked NEW). Every value is a one-line edit.
+   ===================================================================== */
+:root{
+  --c-chalk:#F7F4EE; --c-soft:#E0DACE; --c-brass:#EDC67C; --c-scrim:10 9 8;
+  --c-ground:#0A0908;
+  --font:"Schibsted Grotesk", system-ui, sans-serif;
+  --fs-clock:216px; --fs-glance:52px; --fs-detail:26px; --fs-caption:24px; --fs-label:22px;
+  --tracking-clock:-.055em; --tracking-label:.16em;
+  --sp-5:44px; --sp-edge:56px;
+  --ease-settle:cubic-bezier(0.22, 1, 0.36, 1); --ease-press:cubic-bezier(0.34, 1.56, 0.64, 1); --ease-out:cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-settle:1400ms; --dur-settle-fade:1100ms; --dur-release:1200ms;
+  --settle-from:scale(1.035) translateY(8px);
+  --drift-cycle:240s;
+  --hub-w:1263px; --hub-h:841px;
+
+  /* NEW · issue #5 v2: spreads */
+  --seam:4px;                    /* ground-coloured gutter: a printed spread, not a border */
+  --cell-stagger:120ms;          /* cells settle in reading order, this far apart */
+  --right-w:520px;               /* weather/next column; the composer narrows it when a seam is near */
+
+  /* NEW · issue #5 v2: drift (the motion personality) */
+  --ease-drift:cubic-bezier(0.37, 0, 0.63, 1);  /* sine in-out: turnarounds are soft, never a bounce */
+  --drift-dur:32s;               /* one sweep; ping-pong, so a full breath is 64s */
+  --drift-zoom-from:1.03; --drift-zoom-to:1.12;  /* Ken Burns, scaled about the focus point */
+  --drift-pan-scale:1.10;        /* overscan for pans; travel ≤ (scale-1)/2 so edges never show */
+  --drift-pan-travel:4.5%;
+  --pano-dur:75s;                /* panoramas traverse once per sweep, end to end */
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:var(--hub-w);height:var(--hub-h);background:#000;overflow:hidden}
+body{font-family:var(--font);color:var(--c-chalk);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.hub{position:relative;width:var(--hub-w);height:var(--hub-h);overflow:hidden;background:var(--c-ground);user-select:none;-webkit-tap-highlight-color:transparent;outline:none}
+.hub:focus-visible::after{content:"";position:absolute;inset:6px;border-radius:10px;box-shadow:inset 0 0 0 3px var(--c-brass);pointer-events:none;z-index:20}
+
+/* ---------- Composition stack: one .comp per screen, two at most in the DOM ---------- */
+.stack{position:absolute;inset:0;isolation:isolate}
+.comp{position:absolute;inset:0;background:var(--c-ground)}
+/* cell > settler (arrival transform) > mover (drift transform) > img. Three layers so the
+   settle and the drift never fight over one transform. */
+.cell{position:absolute;overflow:hidden;background:var(--c-ground)}
+.settler{position:absolute;inset:0;will-change:transform}
+.mover{position:absolute;inset:0;will-change:transform;backface-visibility:hidden}
+.mover img{display:block;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none}
+.mover.px{inset:auto;left:0;top:0}          /* pano / tilt: sized in px, translated across */
+
+/* ---------- Scrim: vignette pools (generated, as in #3) ---------- */
+.scrim{position:absolute;inset:0;pointer-events:none}
+
+/* ---------- Burn-in drift (stepped; stays on under reduced motion) ---------- */
+.drift{position:absolute;inset:0;animation:drift var(--drift-cycle) steps(1,end) infinite}
+@keyframes drift{0%{transform:translate(0,0)}12.5%{transform:translate(6px,-4px)}25%{transform:translate(12px,-8px)}37.5%{transform:translate(6px,-12px)}50%{transform:translate(-4px,-6px)}62.5%{transform:translate(-10px,2px)}75%{transform:translate(-6px,8px)}87.5%{transform:translate(2px,4px)}100%{transform:translate(0,0)}}
+
+/* ---------- Ambient overlay (geometry unchanged from #3) ---------- */
+.left{position:absolute;left:var(--sp-edge);bottom:48px;display:flex;flex-direction:column;align-items:flex-start}
+.caption{font:italic 400 var(--fs-caption)/1 var(--font);color:var(--c-soft);display:flex;align-items:center;gap:12px;margin-bottom:var(--sp-5);transition:opacity 300ms var(--ease-out),transform 600ms var(--ease-settle)}
+.caption::before{content:"";width:28px;height:1px;background:currentColor;opacity:.7}
+.caption.swap{opacity:0;transform:translateY(6px)}
+.caption:empty{display:none}
+.eyebrow{font:500 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.clock{font:500 var(--fs-clock)/.8 var(--font);letter-spacing:var(--tracking-clock);margin:22px 0 0 -10px;white-space:nowrap}
+.right{position:absolute;right:var(--sp-edge);bottom:52px;width:var(--right-w);display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.wx{display:flex;align-items:baseline;gap:14px}
+.wx b{font:500 var(--fs-glance)/1 var(--font);letter-spacing:-.03em}
+.wx span{font:400 var(--fs-detail)/1 var(--font);color:var(--c-soft)}
+.label{font:600 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-brass);margin-top:30px}
+.next{font:500 var(--fs-glance)/1.02 var(--font);letter-spacing:-.02em;margin-top:14px}
+.place{font:400 var(--fs-detail)/1.3 var(--font);color:var(--c-soft);margin-top:10px}
+[hidden]{display:none!important}
+
+/* ---------- Rules sheet (#rules): review artefact, not wall UI ---------- */
+.spec{position:absolute;inset:0;z-index:30;display:none;background:#F4F1EA;color:#1D1B18;padding:24px 34px;font:400 13px/1.38 var(--font);overflow:hidden}
+.hub[data-view="rules"] .spec{display:grid;grid-template-columns:640px minmax(0,1fr);gap:30px}
+.spec h1{font:600 22px/1.1 var(--font);letter-spacing:-.01em}
+.spec h2{font:600 11px/1 var(--font);letter-spacing:.14em;text-transform:uppercase;color:#6B6358;margin:14px 0 6px}
+.spec .lede{color:#5A534A;margin-top:5px}
+.spec table{border-collapse:collapse;width:100%}
+.spec td,.spec th{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:12.5px;vertical-align:top}
+.spec th{font-weight:600;color:#6B6358;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.spec code{font:500 11.5px/1 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.05);padding:2px 4px;border-radius:3px}
+.spec ol,.spec ul{padding-left:18px}.spec li{margin:2px 0;font-size:12.5px}
+.th{display:inline-block;position:relative;width:54px;height:36px;background:#1D1B18;vertical-align:middle;margin-right:6px;overflow:hidden}
+.th i{position:absolute;background:#CDBFA6}
+.k{font-weight:600;white-space:nowrap}
+
+/* ---------- Mockup chrome (press H); hidden so screenshots stay honest ---------- */
+.hud{position:fixed;left:12px;top:12px;z-index:40;display:none;gap:6px;flex-wrap:wrap;max-width:900px;padding:8px;border-radius:12px;background:rgb(20 18 16 / .9);font:500 13px/1 system-ui;color:#eee;align-items:center}
+body.hud-on .hud{display:flex}
+.hud button{font:inherit;color:#eee;background:rgb(255 255 255 / .1);border:0;border-radius:8px;padding:8px 10px;cursor:pointer;transition:transform 180ms var(--ease-press),background 180ms var(--ease-out)}
+.hud button:hover{background:rgb(255 255 255 / .18)}
+.hud button:active{transform:scale(.95)}
+.hud button[aria-pressed="true"]{background:var(--c-brass);color:#1D1B18}
+.hud button:focus-visible{outline:2px solid var(--c-brass);outline-offset:2px}
+.hud small{opacity:.6;padding:0 6px}
+
+@media (prefers-reduced-motion: reduce){
+  :root{--settle-from:none;--cell-stagger:0ms}
+  .caption{transition-property:opacity!important;transition-duration:320ms!important}
+}
+</style>
+</head>
+<body>
+<div class="hub" id="hub" tabindex="0" aria-label="Homeroom hub, Ambient. Press N for the next screen, F for drift time-lapse, H for mockup controls.">
+  <div class="stack" id="stack" aria-hidden="true"></div>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="drift">
+    <div class="left">
+      <p class="caption" id="caption"></p>
+      <div class="eyebrow">Monday · 2 November</div>
+      <div class="clock" id="clock">7:42</div>
+    </div>
+    <div class="right" id="right">
+      <div class="wx"><b>14°</b><span>Partly cloudy</span></div>
+      <div id="nextblock">
+        <div class="label">Next · 8:15</div>
+        <div class="next">School run</div>
+        <div class="place">Leave by 8:05</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="spec" aria-label="Presentation rules">
+    <div>
+      <h1>Ambient v2 · spreads + drift</h1>
+      <p class="lede">Every screen covers all 1263×841 px. Each cell is cut to a camera ratio (3:4, 1:1, 3:2, 3:1), so most photos land with almost no crop. A pure function <code>compose(queue, config) → screen</code> chooses the layout.</p>
+      <h2>Layout vocabulary (4px seams, integer cells; the odd px goes right/bottom)</h2>
+      <table>
+        <thead><tr><th>Layout</th><th>Takes</th><th>Cells (px)</th><th>Drift</th></tr></thead>
+        <tbody>
+          <tr><td class="k"><span class="th"><i style="inset:0"></i></span>hero</td><td>1 L</td><td>1263×841 (3:2)</td><td>Ken Burns about <code>focus</code></td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;top:0;bottom:0;width:26px"></i><i style="right:0;top:0;bottom:0;width:26px"></i></span>duo</td><td>2 P</td><td>629 + 630 × 841 (3:4)</td><td>counter-tilt (left rises, right falls)</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;top:0;bottom:0;width:26px"></i><i style="right:0;top:0;width:26px;height:17px"></i><i style="right:0;bottom:0;width:26px;height:17px"></i></span>feature</td><td>1 P + 2 L</td><td>629×841 · 630×418 · 630×419</td><td>lead zooms; stack counter-pans</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;top:0;width:26px;height:17px"></i><i style="right:0;top:0;width:26px;height:17px"></i><i style="left:0;bottom:0;width:26px;height:17px"></i><i style="right:0;bottom:0;width:26px;height:17px"></i></span>quad</td><td>4 L (or S, if focus survives)</td><td>629/630 × 418/419 (3:2)</td><td>lead zooms; others pan at 60%</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;top:0;bottom:0;width:36px"></i><i style="right:0;top:0;width:16px;height:17px"></i><i style="right:0;bottom:0;width:16px;height:17px"></i></span>squares</td><td>3 S</td><td>841×841 · 418×418 · 418×419 (1:1)</td><td>lead zooms; pair counter-tilts</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;right:0;top:0;height:17px"></i><i style="left:0;bottom:0;width:26px;height:17px"></i><i style="right:0;bottom:0;width:26px;height:17px"></i></span>band</td><td>1 W + 2 L</td><td>1263×421 (3:1) · 629/630×416</td><td>pano pans; pair eases out</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;right:-40px;top:0;bottom:0;opacity:.75"></i></span>sweep</td><td>1 W, alone</td><td>full height; 3:1 → 2523 wide</td><td>end-to-end traverse, 75s</td></tr>
+          <tr><td class="k"><span class="th"><i style="left:0;right:0;top:-14px;bottom:-14px;opacity:.75"></i></span>tilt</td><td>1 P, alone (last resort)</td><td>full width, crop window</td><td>vertical pan; face held between 18–45% of height</td></tr>
+        </tbody>
+      </table>
+      <h2>Composer (pure, tested; look-ahead 8 picks)</h2>
+      <ol>
+        <li>Classify: <b>L</b> 1.2 ≤ r ≤ 2 · <b>P</b> r ≤ .85 · <b>S</b> .85–1.2 · <b>W</b> r &gt; 2.</li>
+        <li>The head pick sets the layout. Partners must <i>belong together</i> (≤72h apart, or a shared person; never the same burst). Partners are pulled forward in the queue, never skipped.</li>
+        <li>Prefer the layout with the most photos that fits the <b>crop budget</b>: a photo loses ≤ 25% of its area, unless its <code>focus</code> box survives.</li>
+        <li><b>Rhythm</b> (config <code>["spread","spread","hero"]</code>): after two spreads, a strong landscape gets the whole wall. More photos, with a breath.</li>
+        <li>Nothing fits → hero (L), sweep (W) or tilt (P). Never a visible backdrop.</li>
+      </ol>
+    </div>
+    <div>
+      <h2 style="margin-top:4px">Drift: one personality, varied per cell</h2>
+      <table><tbody>
+        <tr><td class="k">Feel</td><td>A slow breath, not a show. Ping-pong sweeps of 32s on sine in-out, so you notice it on a second glance, not from the sofa.</td></tr>
+        <tr><td class="k">Faces safe</td><td>Zooms scale about the <code>focus</code> point (transform-origin), so faces stay fixed while the frame tightens. Pans scale about the <i>centre</i> and travel ≤ (scale−1)/2, so edges never show.</td></tr>
+        <tr><td class="k">Counterpoint</td><td>Neighbouring cells always move in opposite directions, and each starts at a different phase, so they never turn around together. One lead cell (the largest) does the Ken Burns.</td></tr>
+        <tr><td class="k">Arrival</td><td>The settle (1100 fade · 1400 settle) runs on the <i>settler</i>, and the drift is already running on the <i>mover</i> inside it, so a photo arrives moving. Cells settle in reading order, 120ms apart. The outgoing screen keeps drifting while it fades. Freezing it would read as a hitch.</td></tr>
+        <tr><td class="k">Overlay</td><td>Never moves (only the stepped burn-in drift). The photo moves, the clock doesn't.</td></tr>
+        <tr><td class="k">Reduced</td><td>No drift, no settle transform. Opacity crossfades only.</td></tr>
+      </tbody></table>
+      <h2>Overlay over seams</h2>
+      <ul>
+        <li>Horizontal seams sit at y ≈ 420. Both text clusters start below y ≈ 500, so they never cross one.</li>
+        <li>Vertical seams: the clock column ends ≈ 540, and the duo/feature/quad seam is at 629. In <b>squares</b>, the seam is at 841, so the composer sets <code>--right-w</code> to 338 and long event titles wrap to two lines.</li>
+        <li>Scrim: #3's pools for now. <b>Adaptive α per screen</b> is needed: p95 luminance under each text box, sampled across the whole drift envelope (AC 17).</li>
+      </ul>
+      <h2>Performance budget (TCL, DPR 1.9)</h2>
+      <ul>
+        <li>≤ 4 moving layers per screen, and ≤ 2 screens in the DOM. Transform only, with no animated filter or blur.</li>
+        <li>Image size = cell × overscan (1.12) × 1.9, capped at 2400 on the long side. For a hero, that's ≈ 4.8 MP decoded.</li>
+        <li>Release the outgoing screen's images (<code>src=""</code> + remove) after the release window, for the AC 14 soak.</li>
+        <li>Measure first: build hero + drift, prove 60 fps on the tablet, then add the spreads.</li>
+      </ul>
+      <h2>Contract</h2>
+      <p><code>GET /ambient/queue?n=8</code> → picks with <code>w,h,focus{x,y,w,h},tone,takenAt,people[],burstId,why.headline</code>. The layout belongs to the client, not the enum.</p>
+    </div>
+  </section>
+</div>
+
+<div class="hud" role="toolbar" aria-label="Mockup controls">
+  <button data-go="hero">Hero</button><button data-go="duo">Duo</button><button data-go="feature">Feature</button>
+  <button data-go="quad">Quad</button><button data-go="squares">Squares</button><button data-go="band">Band</button>
+  <button data-go="sweep">Pano sweep</button><button data-go="tilt">Lone portrait</button>
+  <button data-go="settle">Settle (frozen)</button><button data-go="loop">Rhythm loop</button>
+  <button data-go="turn">What if: pages turn</button><button data-go="rules">Rules</button>
+  <button data-act="next">Next (N)</button><button data-act="fast" aria-pressed="false">Drift ×8 (F)</button>
+  <small>Loop dwell 10s for review · wall dwell 5 min</small>
+</div>
+
+<script>
+/* Placeholder photos only (picsum). Never household images. */
+const W = 1263, H = 841, DPR = 1.9, OVER = 1.12, CAP = 2400;
+const pic = (id, w, h) => {
+  const s = Math.min(1, CAP / Math.max(w, h));
+  return `https://picsum.photos/id/${id}/${Math.round(w*s)}/${Math.round(h*s)}`;
+};
+
+/* ---- Layout geometry: integer cells, 4px seams, odd px right/bottom ---- */
+const L = {
+  hero:    [[0,0,1263,841]],
+  duo:     [[0,0,629,841],[633,0,630,841]],
+  feature: [[0,0,629,841],[633,0,630,418],[633,422,630,419]],
+  quad:    [[0,0,629,418],[633,0,630,418],[0,422,629,419],[633,422,630,419]],
+  squares: [[0,0,841,841],[845,0,418,418],[845,422,418,419]],
+  band:    [[0,0,1263,421],[0,425,629,416],[633,425,630,416]],
+  sweep:   [[0,0,1263,841]],
+  tilt:    [[0,0,1263,841]],
+};
+/* Drift per cell: lead does Ken Burns about focus; neighbours counter-move. */
+const D = {
+  hero:    ['kb'],
+  duo:     ['tiltUp','tiltDown'],
+  feature: ['kb','panL','panR'],
+  quad:    ['kb','tiltDown.6','panR.6','out'],
+  squares: ['kb','tiltDown','tiltUp'],
+  band:    ['panR','out','kb'],
+  sweep:   ['traverseX'],
+  tilt:    ['traverseY'],
+};
+/* Right column width per layout: clears any vertical seam by ≥ 24px. */
+const RIGHT_W = {squares: 338};
+
+/* ---- Screens, as the composer would emit them (focus = face/subject centre, 0..1) ---- */
+const S = {
+  hero:    {layout:'hero', ids:[1016], focus:[[.52,.42]], caption:'Three Octobers ago'},
+  duo:     {layout:'duo', ids:[1027,64], focus:[[.5,.32],[.5,.3]], caption:'Same weekend, two summers ago'},
+  feature: {layout:'feature', ids:[1011,1015,1036], focus:[[.5,.45],[.5,.5],[.5,.5]], caption:'The lake trip · August'},
+  quad:    {layout:'quad', ids:[1043,1039,1044,1051], focus:[[.5,.5],[.5,.5],[.5,.5],[.5,.5]], caption:'One Saturday, last spring'},
+  squares: {layout:'squares', ids:[237,1025,1062], focus:[[.5,.4],[.5,.4],[.5,.45]], caption:'The dogs, all year'},
+  band:    {layout:'band', ids:[1018,1019,1022], focus:[[.5,.5],[.5,.5],[.5,.5]], caption:'Up the mountain · five years ago'},
+  sweep:   {layout:'sweep', ids:[1015], focus:[[.5,.5]], caption:'Last spring'},
+  tilt:    {layout:'tilt', ids:[1005], focus:[[.55,.38]], caption:'A favourite'},
+};
+const LOOP = ['hero','duo','feature','band','quad','squares','tilt','sweep'];
+const TURN_POOL = [1020,1021,1024,1028,1029,1031,1033,1035,1040,1041];
+
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const ms = n => { const v = tok(n); return parseFloat(v) * (v.endsWith('ms') ? 1 : v.endsWith('s') ? 1000 : 1); };
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+let rate = 1;            // mockup only: drift time-lapse
+let drifts = [];         // live drift animations (for the ×8 toggle)
+
+/* ---- Drift keyframes for one mover ---- */
+function driftKF(kind, cell, foc){
+  const [name, a] = kind.split('.'); const amp = a ? +('.'+a) : 1;
+  const z0 = +tok('--drift-zoom-from'), z1 = +tok('--drift-zoom-to'), ps = +tok('--drift-pan-scale');
+  const t = parseFloat(tok('--drift-pan-travel')) * amp;
+  const P = (x,y) => `translate3d(${x}%,${y}%,0) scale(${ps})`;
+  switch(name){
+    case 'kb':       return [{transform:`scale(${z0})`},{transform:`scale(${z1})`}];
+    case 'out':      return [{transform:`scale(${z1})`},{transform:`scale(${z0})`}];
+    case 'tiltUp':   return [{transform:P(0, t)},{transform:P(0,-t)}];
+    case 'tiltDown': return [{transform:P(0,-t)},{transform:P(0, t)}];
+    case 'panL':     return [{transform:P( t,0)},{transform:P(-t,0)}];
+    case 'panR':     return [{transform:P(-t,0)},{transform:P( t,0)}];
+    case 'traverseX':{ const span = cell[3]*3 - cell[2]; return [{transform:'translate3d(0,0,0)'},{transform:`translate3d(${-span}px,0,0)`}]; }
+    // Lone portrait: the face travels between 18% and 45% of screen height — always in frame,
+    // always above the overlay band. Clamped to the image so no edge ever shows.
+    case 'traverseY':{ const h = cell[2]/.75, fy = h*foc[1], clamp = v => Math.min(h - cell[3], Math.max(0, v));
+                       const lo = clamp(fy - cell[3]*.45), hi = clamp(fy - cell[3]*.18);
+                       return [{transform:`translate3d(0,${-lo}px,0)`},{transform:`translate3d(0,${-hi}px,0)`}]; }
+  }
+}
+
+/* ---- Build a screen: cells → settler → mover → img ---- */
+function build(key){
+  const s = S[key], cells = L[s.layout], kinds = D[s.layout];
+  const el = document.createElement('div'); el.className = 'comp'; el.dataset.layout = s.layout;
+  const imgs = [], settlers = [], movers = [];
+  cells.forEach((c, i) => {
+    const cell = document.createElement('div'); cell.className = 'cell';
+    Object.assign(cell.style, {left:c[0]+'px', top:c[1]+'px', width:c[2]+'px', height:c[3]+'px'});
+    const st = document.createElement('div'); st.className = 'settler';
+    const mv = document.createElement('div'); mv.className = 'mover';
+    const foc = s.focus[i] || [.5,.5];
+    let iw = c[2]*OVER*DPR, ih = c[3]*OVER*DPR;
+    if (kinds[i] === 'traverseX'){ mv.classList.add('px'); mv.style.width = c[3]*3+'px'; mv.style.height = c[3]+'px'; iw = c[3]*3*DPR; ih = c[3]*DPR; }
+    if (kinds[i] === 'traverseY'){ mv.classList.add('px'); mv.style.width = c[2]+'px'; mv.style.height = c[2]/.75+'px'; iw = c[2]*DPR; ih = c[2]/.75*DPR; }
+    // Zooms scale about the focus (faces hold still). Pans scale about the centre: an
+    // off-centre origin eats the overscan on one side and shows a ground sliver.
+    mv.style.transformOrigin = /^(kb|out)/.test(kinds[i]) ? `${foc[0]*100}% ${foc[1]*100}%` : '50% 50%';
+    const img = new Image(); img.alt = ''; img.decoding = 'async';
+    img.src = pic(s.ids[i], iw, ih); img.style.objectPosition = `${foc[0]*100}% ${foc[1]*100}%`;
+    mv.append(img); st.append(mv); cell.append(st); el.append(cell);
+    imgs.push(img); settlers.push(st); movers.push({mv, kind:kinds[i], cell:c, foc});
+  });
+  return {el, imgs, settlers, movers, s};
+}
+
+/* Mockup tolerance: a missing placeholder id is swapped for a known one.
+   (Production rule: any decode failure → keep the current screen, try the next candidate.) */
+async function decodeAll(imgs){
+  await Promise.all(imgs.map(async i => {
+    try { await i.decode(); }
+    catch { i.src = pic(1018, 1200, 800); try { await i.decode(); } catch {} }
+  }));
+}
+
+function startDrift(movers){
+  if (reduced()) return;
+  const dur = ms('--drift-dur'), pano = ms('--pano-dur');
+  movers.forEach(({mv, kind, cell, foc}, i) => {
+    const long = kind.startsWith('traverse');
+    const a = mv.animate(driftKF(kind, cell, foc), {
+      duration: long ? pano : dur, easing: tok('--ease-drift'),
+      iterations: Infinity, direction: 'alternate'
+    });
+    // Phase offset: neighbours never turn around together.
+    a.currentTime = long ? 0 : ((i * 0.37) % 1) * dur;
+    a.playbackRate = rate;
+    drifts.push(a);
+  });
+}
+
+const stack = document.getElementById('stack'), cap = document.getElementById('caption'), right = document.getElementById('right');
+let settleAnims = [], releaseT = null, capT = null;
+
+function release(nodes){
+  nodes.forEach(n => {
+    n.querySelectorAll('.mover').forEach(m => m.getAnimations().forEach(a => { a.cancel(); drifts = drifts.filter(d => d !== a); }));
+    n.querySelectorAll('img').forEach(i => i.removeAttribute('src'));   // let the GPU texture go (AC 14)
+    n.remove();
+  });
+}
+
+/* ---- Show a screen. Decode everything first; the wall never goes blank. ---- */
+async function show(key, {animate = true, freezeAt = null} = {}){
+  const c = build(key);
+  await decodeAll(c.imgs);
+  const old = [...stack.children];
+  clearTimeout(releaseT); clearTimeout(capT);
+  stack.append(c.el);
+  right.style.setProperty('--right-w', (RIGHT_W[c.s.layout] || 520) + 'px');
+  startDrift(c.movers);
+  if (!animate){ release(old); cap.textContent = c.s.caption || ''; return c; }
+
+  const ease = tok('--ease-settle'), stagger = ms('--cell-stagger');
+  settleAnims = [c.el.animate([{opacity:0},{opacity:1}], {duration:ms('--dur-settle-fade'), easing:ease, fill:'backwards'})];
+  if (!reduced()) c.settlers.forEach((st, i) => settleAnims.push(
+    st.animate([{transform:tok('--settle-from')},{transform:'none'}],
+      {duration:ms('--dur-settle'), delay:i*stagger, easing:ease, fill:'backwards'})));
+  cap.classList.add('swap');
+  capT = setTimeout(() => { cap.textContent = c.s.caption || ''; cap.classList.remove('swap'); }, 700);
+  if (freezeAt !== null){
+    clearTimeout(capT);
+    settleAnims.forEach(a => { a.pause(); a.currentTime = freezeAt; });
+    return c;
+  }
+  releaseT = setTimeout(() => release(old), ms('--dur-release') + (c.settlers.length - 1) * stagger);
+  return c;
+}
+
+/* ---- What if: pages turn. One cell at a time takes a new photo from the same story. ---- */
+let turnT = null, turnIx = 0, poolIx = 0;
+const TURN_ORDER = [0,3,1,2];   // diagonal: consecutive changes are never neighbours
+async function turnOne(){
+  const comp = stack.lastElementChild; if (!comp) return;
+  const ci = TURN_ORDER[turnIx++ % TURN_ORDER.length];
+  const cell = comp.children[ci]; if (!cell) return;
+  const oldSt = cell.querySelector('.settler');
+  const box = [0,0,parseFloat(cell.style.width),parseFloat(cell.style.height)];
+  const st = document.createElement('div'); st.className = 'settler';
+  const mv = document.createElement('div'); mv.className = 'mover'; mv.style.transformOrigin = /^(kb|out)/.test(D.quad[ci]) ? '50% 45%' : '50% 50%';
+  const img = new Image(); img.alt = ''; img.src = pic(TURN_POOL[poolIx++ % TURN_POOL.length], box[2]*OVER*DPR, box[3]*OVER*DPR);
+  await decodeAll([img]);
+  mv.append(img); st.append(mv); cell.append(st);
+  startDrift([{mv, kind: D.quad[ci], cell:box, foc:[.5,.45]}]);
+  const ease = tok('--ease-settle');
+  st.animate([{opacity:0},{opacity:1}], {duration:ms('--dur-settle-fade'), easing:ease, fill:'backwards'});
+  if (!reduced()) st.animate([{transform:tok('--settle-from')},{transform:'none'}], {duration:ms('--dur-settle'), easing:ease, fill:'backwards'});
+  setTimeout(() => release([oldSt]), ms('--dur-release'));
+}
+
+/* ---- Scrim pools: from #3, one source of truth ---- */
+const POOL_STOPS=[[0,.76],[.74,.71],[.83,.5],[.92,.2],[1,0]], BASE=[[0,.2],[260,.16],[460,0]];
+const POOLS=[{x:0,y:H,rx:760,ry:620},{x:W,y:H,rx:780,ry:560}];
+const rgba=a=>`rgb(10 9 8 / ${a})`;
+document.getElementById('scrim').style.background = [
+  ...POOLS.map(p=>`radial-gradient(ellipse ${p.rx}px ${p.ry}px at ${p.x}px ${p.y}px, ${POOL_STOPS.map(([o,a])=>`${rgba(a)} ${o*100}%`).join(', ')})`),
+  `linear-gradient(to top, ${BASE.map(([px,a])=>`${rgba(a)} ${px}px`).join(', ')})`].join(',');
+
+/* ---- Router: every state is a hash ---- */
+const STATES = {
+  hero:{screen:'hero'}, duo:{screen:'duo'}, feature:{screen:'feature'}, quad:{screen:'quad'},
+  squares:{screen:'squares'}, band:{screen:'band'}, sweep:{screen:'sweep'}, tilt:{screen:'tilt'},
+  settle:{screen:'hero', then:'feature', freezeAt:240},
+  loop:{screen:'hero', loop:true},
+  turn:{screen:'quad', turn:true},
+  rules:{screen:'quad', rules:true},
+};
+let loopT = null, li = 0;
+async function route(){
+  const key = (location.hash || '#hero').slice(1), st = STATES[key] || STATES.hero;
+  clearInterval(loopT); clearInterval(turnT);
+  settleAnims.forEach(a => a.cancel()); settleAnims = []; cap.classList.remove('swap');
+  release([...stack.children]); drifts = [];
+  const hub = document.getElementById('hub');
+  if (st.rules) hub.dataset.view = 'rules'; else delete hub.dataset.view;
+  await show(st.screen, {animate:false});
+  if (st.then){ await new Promise(r => setTimeout(r, 60)); await show(st.then, {freezeAt:st.freezeAt}); }
+  if (st.loop){ li = 0; loopT = setInterval(next, 10000); }
+  if (st.turn){ turnIx = 0; turnT = setInterval(turnOne, 6000); }
+  document.body.dataset.ready = key;
+}
+function next(){ li = (li + 1) % LOOP.length; show(LOOP[li]); }
+function setFast(on){
+  rate = on ? 8 : 1; drifts.forEach(a => a.playbackRate = rate);
+  document.querySelector('.hud [data-act=fast]').setAttribute('aria-pressed', String(on));
+}
+window.addEventListener('hashchange', route);
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'h') document.body.classList.toggle('hud-on');
+  if (k === 'n') next();
+  if (k === 'f') setFast(rate === 1);
+});
+document.querySelectorAll('.hud [data-go]').forEach(b => b.onclick = () => { location.hash = b.dataset.go; });
+document.querySelector('.hud [data-act=next]').onclick = next;
+document.querySelector('.hud [data-act=fast]').onclick = () => setFast(rate === 1);
+document.fonts.ready.then(route);
+</script>
+</body>
+</html>

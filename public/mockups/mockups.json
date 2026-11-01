@@ -1,0 +1,93 @@
+{
+ "generated": "2026-11-01",
+ "mockups": [
+  {
+   "slug": "site-issue-1",
+   "title": "Showcase \u00b7 Landing page: what, who, why, how it's built",
+   "ref": "Site #1",
+   "date": "2026-11-01",
+   "thumb": "a-rail.png",
+   "shots": 9
+  },
+  {
+   "slug": "issue-44",
+   "title": "UC-20 \u00b7 Morning Bell briefing",
+   "ref": "Product #44",
+   "date": "2026-11-01",
+   "thumb": "ambient.png",
+   "shots": 8
+  },
+  {
+   "slug": "issue-42",
+   "title": "UC-50/52 \u00b7 Hub pairing (device token) and zero-touch deploys",
+   "ref": "Product #42",
+   "date": "2026-11-01",
+   "thumb": "approved.png",
+   "shots": 11
+  },
+  {
+   "slug": "issue-31",
+   "title": "Rail \u00b7 Who's home: header avatars and Roll Call screen (UC-33)",
+   "ref": "Product #31",
+   "date": "2026-11-01",
+   "thumb": "all-home.png",
+   "shots": 9
+  },
+  {
+   "slug": "issue-1",
+   "title": "Foundation (a): stack, Homeroom server, adapters, fakes, use-case stubs",
+   "ref": "Product #1",
+   "date": "2026-11-01",
+   "thumb": "active-stale.png",
+   "shots": 5
+  },
+  {
+   "slug": "issue-8",
+   "title": "UC-10/11 \u00b7 Active mode: walk up, Today rises; idle returns to photos",
+   "ref": "Product #8",
+   "date": "2026-10-31",
+   "thumb": "active.png",
+   "shots": 8
+  },
+  {
+   "slug": "issue-5",
+   "title": "UC-01/03 \u00b7 Ambient photo presentation (landscape + portrait, overlay)",
+   "ref": "Product #5",
+   "date": "2026-10-31",
+   "thumb": "band.png",
+   "shots": 19
+  },
+  {
+   "slug": "issue-3",
+   "title": "Visual identity: Homeroom house style (palette, type, motion, photo presentation)",
+   "ref": "Product #3",
+   "date": "2026-10-31",
+   "thumb": "a-active.png",
+   "shots": 21
+  },
+  {
+   "slug": "issue-24",
+   "title": "Rail \u00b7 Quick add and event-detail sheets (UC-17/18)",
+   "ref": "Product #24",
+   "date": "2026-10-31",
+   "thumb": "add-chore-chips.png",
+   "shots": 14
+  },
+  {
+   "slug": "issue-21",
+   "title": "Rail \u00b7 Home screen: scenes, lights, climate, locks (UC-15)",
+   "ref": "Product #21",
+   "date": "2026-10-31",
+   "thumb": "goodnight.png",
+   "shots": 8
+  },
+  {
+   "slug": "issue-14",
+   "title": "Few more states and refined flow",
+   "ref": "Product #14",
+   "date": "2026-10-31",
+   "thumb": "active.png",
+   "shots": 6
+  }
+ ]
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Homeroom · design mockups</title>
+<style>
+  /* Homeroom tokens (praveenaravind25/homeroom app/src/styles/tokens.css) */
+  :root { --ground:#12100E; --s1:#1C1916; --s2:#25211D; --chalk:#F7F4EE; --soft:#CFC8BB; --mute:#8F887D; --brass:#EDC67C;
+          --r-card:22px; --ease-settle:cubic-bezier(0.22,1,0.36,1); }
+  @font-face { font-family:"Schibsted Grotesk"; src:url("_fonts/schibsted-grotesk.woff2") format("woff2"); font-weight:400 900; font-display:swap; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--ground); color:var(--chalk); font:500 16px/1.45 "Schibsted Grotesk", system-ui, -apple-system, sans-serif; }
+  main { max-width:1280px; margin:0 auto; padding:72px 24px 96px; }
+  h1 { font-size:clamp(36px,5vw,56px); letter-spacing:-.02em; margin:0 0 6px; font-weight:700; }
+  .sub { color:var(--soft); margin:0 0 40px; } .sub b { color:var(--brass); font-weight:600 }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px; }
+  .card { display:block; background:var(--s1); border-radius:var(--r-card); overflow:hidden; color:inherit; text-decoration:none;
+          transition:transform .45s var(--ease-settle), background .3s; }
+  .card:hover { transform:translateY(-4px); background:var(--s2); }
+  .card img, .blank { display:block; width:100%; aspect-ratio:1263/841; object-fit:cover; background:var(--s2); }
+  .t { padding:16px 18px 2px; font-weight:650; font-size:17px; }
+  .m { padding:0 18px 18px; color:var(--mute); font-size:14px; }
+  @media (prefers-reduced-motion: reduce) { .card { transition:none } }
+</style></head>
+<body><main>
+  <h1>Design mockups</h1>
+  <p class="sub">Every direction the designer proposed, newest first · <b>11</b> mockups. Sample household only; not the live product.</p>
+  <div class="grid">
+    <a class="card" href="site-issue-1/"><img src="site-issue-1/a-rail.png" alt="" loading="lazy"><div class="t">Showcase · Landing page: what, who, why, how it&#x27;s built</div><div class="m">Site #1 · 2026-11-01 · 9 screens</div></a>
+    <a class="card" href="issue-44/"><img src="issue-44/ambient.png" alt="" loading="lazy"><div class="t">UC-20 · Morning Bell briefing</div><div class="m">Product #44 · 2026-11-01 · 8 screens</div></a>
+    <a class="card" href="issue-42/"><img src="issue-42/approved.png" alt="" loading="lazy"><div class="t">UC-50/52 · Hub pairing (device token) and zero-touch deploys</div><div class="m">Product #42 · 2026-11-01 · 11 screens</div></a>
+    <a class="card" href="issue-31/"><img src="issue-31/all-home.png" alt="" loading="lazy"><div class="t">Rail · Who&#x27;s home: header avatars and Roll Call screen (UC-33)</div><div class="m">Product #31 · 2026-11-01 · 9 screens</div></a>
+    <a class="card" href="issue-1/"><img src="issue-1/active-stale.png" alt="" loading="lazy"><div class="t">Foundation (a): stack, Homeroom server, adapters, fakes, use-case stubs</div><div class="m">Product #1 · 2026-11-01 · 5 screens</div></a>
+    <a class="card" href="issue-8/"><img src="issue-8/active.png" alt="" loading="lazy"><div class="t">UC-10/11 · Active mode: walk up, Today rises; idle returns to photos</div><div class="m">Product #8 · 2026-10-31 · 8 screens</div></a>
+    <a class="card" href="issue-5/"><img src="issue-5/band.png" alt="" loading="lazy"><div class="t">UC-01/03 · Ambient photo presentation (landscape + portrait, overlay)</div><div class="m">Product #5 · 2026-10-31 · 19 screens</div></a>
+    <a class="card" href="issue-3/"><img src="issue-3/a-active.png" alt="" loading="lazy"><div class="t">Visual identity: Homeroom house style (palette, type, motion, photo presentation)</div><div class="m">Product #3 · 2026-10-31 · 21 screens</div></a>
+    <a class="card" href="issue-24/"><img src="issue-24/add-chore-chips.png" alt="" loading="lazy"><div class="t">Rail · Quick add and event-detail sheets (UC-17/18)</div><div class="m">Product #24 · 2026-10-31 · 14 screens</div></a>
+    <a class="card" href="issue-21/"><img src="issue-21/goodnight.png" alt="" loading="lazy"><div class="t">Rail · Home screen: scenes, lights, climate, locks (UC-15)</div><div class="m">Product #21 · 2026-10-31 · 8 screens</div></a>
+    <a class="card" href="issue-14/"><img src="issue-14/active.png" alt="" loading="lazy"><div class="t">Few more states and refined flow</div><div class="m">Product #14 · 2026-10-31 · 6 screens</div></a>
+  </div>
+</main></body></html>

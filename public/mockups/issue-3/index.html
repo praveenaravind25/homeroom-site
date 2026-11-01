@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, height=841, initial-scale=1">
+<title>Homeroom · B · Full Bleed v0.1 (issue #3)</title>
+<!-- Review only. Production self-hosts Schibsted Grotesk (local-first: the wall works with the internet down). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..700;1,400..600&display=block" rel="stylesheet">
+<style>
+/* =====================================================================
+   HOMEROOM TOKENS · v0.1 · B "Full Bleed"
+   This :root block is the tokens file, verbatim. Dev lifts it into
+   tokens.css and mirrors it in tokens.json. Every value is a one-line edit.
+   ===================================================================== */
+:root{
+  /* Colour: chalk on photo. Brass is the ONLY accent and means "now / next". */
+  --c-chalk:  #F7F4EE;   /* primary text: clock, titles */
+  --c-soft:   #E0DACE;   /* secondary text: dates, places, labels */
+  --c-brass:  #EDC67C;   /* accent: Next, Morning Bell, the "now" row. Never decoration */
+  --c-scrim:  10 9 8;    /* warm near-black, used as rgb(var(--c-scrim) / α) */
+  --c-hairline: rgb(247 244 238 / .16);
+  --c-night:  #6F604E;   /* Night clock on black: 3.4:1, large text, dark-adapted eye */
+  --c-ground: #0A0908;   /* behind photos (letterbox, load, Night) */
+
+  /* Scrim: alpha under any text on a photo is >= this, measured (see #spec) */
+  --scrim-min: .72;
+  --scrim-active: .80;   /* Active dim: photo recedes, today comes forward */
+
+  /* Type: one family, Schibsted Grotesk (self-hosted in production) */
+  --font: "Schibsted Grotesk", system-ui, sans-serif;
+  --fs-clock: 216px;       /* Ambient hero */
+  --fs-clock-small: 120px; /* Recess; = the clock floor */
+  --fs-glance: 52px;       /* next event, temperature (read at 2–3 m) */
+  --fs-title: 40px;        /* Active row titles */
+  --fs-body: 28px;         /* Active times, dates */
+  --fs-detail: 26px;       /* places, sub-lines (approach tier floor) */
+  --fs-caption: 24px;      /* Yearbook caption */
+  --fs-label: 22px;        /* uppercase labels; the absolute floor */
+  --tracking-clock: -.055em;
+  --tracking-label: .16em;
+  /* Floors, enforced by test */
+  --floor-clock: 120px; --floor-glance: 44px; --floor-approach: 26px; --floor-any: 22px;
+
+  /* Space: 8-pt base; the wall edge is 56 */
+  --sp-1: 8px; --sp-2: 16px; --sp-3: 24px; --sp-4: 32px; --sp-5: 44px; --sp-edge: 56px;
+  /* Radii: B has no boxes. Only dots and the focus ring are round. */
+  --r-none: 0; --r-focus: 10px; --r-dot: 999px;
+
+  /* Motion: transform + opacity only */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-press:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:    cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-settle: 1400ms; --dur-settle-fade: 1100ms; --dur-release: 1200ms;
+  --dur-mode: 760ms; --dur-exit: 420ms; --dur-press: 180ms; --dur-night: 1600ms;
+  --stagger: 55ms; --stagger-lead: 180ms;
+  --settle-from: scale(1.035) translateY(8px);
+  --recede-scale: 1.06;
+  --drift-cycle: 240s;  /* burn-in: 8 steps of ≤14 px over 4 min, every overlay incl. Night */
+
+  --hub-w: 1263px; --hub-h: 841px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:var(--hub-w);height:var(--hub-h);background:#000;overflow:hidden}
+body{font-family:var(--font);color:var(--c-chalk);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.tnum{font-variant-numeric:tabular-nums}
+
+.hub{position:relative;width:var(--hub-w);height:var(--hub-h);overflow:hidden;background:var(--c-ground);user-select:none;-webkit-tap-highlight-color:transparent;outline:none}
+.hub:focus-visible::after{content:"";position:absolute;inset:6px;border-radius:var(--r-focus);box-shadow:inset 0 0 0 3px var(--c-brass);pointer-events:none;z-index:20}
+.notrans,.notrans *{transition:none!important}
+
+/* ---------- Photo stack + settle ---------- */
+.stack{position:absolute;inset:0;transition:transform 1200ms var(--ease-settle),opacity var(--dur-night) var(--ease-out)}
+.ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:var(--settle-from);will-change:transform,opacity}
+.ph.on{opacity:1;transform:none;transition:opacity var(--dur-settle-fade) var(--ease-settle),transform var(--dur-settle) var(--ease-settle)}
+.ph.hold{opacity:1;transform:none}            /* outgoing: holds at full under the arrival */
+.ph.snap{transition:none!important}
+
+/* ---------- Scrim: a vignette, not a band (generated from POOLS so CSS and proof agree) ---------- */
+.scrim{position:absolute;inset:0;pointer-events:none;transition:opacity var(--dur-mode) var(--ease-out)}
+.dim{position:absolute;inset:0;background:rgb(var(--c-scrim) / var(--scrim-active));opacity:0;pointer-events:none;transition:opacity var(--dur-mode) var(--ease-out)}
+
+/* ---------- Burn-in drift: stepped, tiny, always on (also under reduced motion: steps aren't motion) ---------- */
+.drift{position:absolute;inset:0;animation:drift var(--drift-cycle) steps(1,end) infinite}
+@keyframes drift{
+  0%{transform:translate(0,0)} 12.5%{transform:translate(6px,-4px)} 25%{transform:translate(12px,-8px)} 37.5%{transform:translate(6px,-12px)}
+  50%{transform:translate(-4px,-6px)} 62.5%{transform:translate(-10px,2px)} 75%{transform:translate(-6px,8px)} 87.5%{transform:translate(2px,4px)} 100%{transform:translate(0,0)}}
+
+/* ---------- AMBIENT overlay ---------- */
+.amb{transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle)}
+.left{position:absolute;left:var(--sp-edge);bottom:48px;display:flex;flex-direction:column;align-items:flex-start}
+.caption{font:italic 400 var(--fs-caption)/1 var(--font);color:var(--c-soft);letter-spacing:.005em;display:flex;align-items:center;gap:12px;margin-bottom:var(--sp-5);transition:opacity 300ms var(--ease-out),transform 600ms var(--ease-settle)}
+.caption::before{content:"";width:28px;height:1px;background:currentColor;opacity:.7}
+.caption.swap{opacity:0;transform:translateY(6px)}
+.clockwrap{transform-origin:0 100%;transition:transform var(--dur-mode) var(--ease-settle)}
+.eyebrow{font:500 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft);transition:opacity 300ms var(--ease-out)}
+.clock{font:500 var(--fs-clock)/.8 var(--font);letter-spacing:var(--tracking-clock);margin:22px 0 0 -10px;white-space:nowrap}
+.right{position:absolute;right:var(--sp-edge);bottom:52px;width:520px;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.wx{display:flex;align-items:baseline;gap:14px}
+.wx b{font:500 var(--fs-glance)/1 var(--font);letter-spacing:-.03em;color:var(--c-chalk)}
+.wx span{font:400 var(--fs-detail)/1 var(--font);color:var(--c-soft)}
+.label{font:600 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-brass)}
+.right .label{margin-top:30px}
+.next{font:500 var(--fs-glance)/1.02 var(--font);letter-spacing:-.02em;margin-top:14px}
+.place{font:400 var(--fs-detail)/1.3 var(--font);color:var(--c-soft);margin-top:10px}
+
+/* Quiet corner (what-if): the server says which side of the photo is calm; the clock goes there */
+.hub[data-layout="right"] .left{left:auto;right:var(--sp-edge);align-items:flex-end;text-align:right}
+.hub[data-layout="right"] .clock{margin:22px -6px 0 0}
+.hub[data-layout="right"] .caption{flex-direction:row-reverse}
+.hub[data-layout="right"] .right{right:auto;left:var(--sp-edge);align-items:flex-start;text-align:left}
+.hub[data-layout="right"] .clockwrap{transform-origin:100% 100%}
+
+/* Recess: B with less. Smaller clock, no next event, the photo leads */
+.hub[data-recess] .clock{font-size:var(--fs-clock-small);margin:18px 0 0 -6px}
+.hub[data-recess] .right{opacity:0}
+
+/* ---------- ACTIVE ---------- */
+.act{position:absolute;opacity:0;transform:translateY(14px);pointer-events:none;
+  transition:opacity var(--dur-exit) var(--ease-out),transform var(--dur-exit) var(--ease-out)}
+.hub[data-mode="active"] .act{opacity:1;transform:none;pointer-events:auto;
+  transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle);
+  transition-delay:calc(var(--i,0) * var(--stagger) + var(--stagger-lead))}
+.hub[data-mode="active"] .stack{transform:scale(var(--recede-scale))}
+.hub[data-mode="active"] .dim{opacity:1}
+.hub[data-mode="active"] .scrim{opacity:0}
+.hub[data-mode="active"] .amb{opacity:0;transform:translateY(10px);transition-duration:var(--dur-exit)}
+.hub[data-mode="active"] .clockwrap{transform:translateY(-669px) scale(.42)}
+.hub[data-mode="active"] .eyebrow{opacity:0}
+
+.head{left:250px;top:58px;display:flex;flex-direction:column;gap:12px}
+.bell{display:flex;align-items:center;gap:12px}
+.bell .dot{width:10px;height:10px;border-radius:var(--r-dot);background:var(--c-brass)}
+.head .d{font:400 var(--fs-body)/1 var(--font);color:var(--c-soft)}
+
+.today{left:var(--sp-edge);top:160px;width:690px}
+.row{display:grid;grid-template-columns:132px 1fr;padding:22px 0;border-top:1px solid var(--c-hairline);transform-origin:0 50%;transition:transform var(--dur-press) var(--ease-press)}
+.row:active{transform:scale(.985)}
+.row .t{font:500 var(--fs-body)/1.25 var(--font);color:var(--c-soft);position:relative}
+.row .w{font:500 var(--fs-title)/1.08 var(--font);letter-spacing:-.012em}
+.row .w small{display:block;font:400 var(--fs-detail)/1.3 var(--font);color:var(--c-soft);letter-spacing:0;margin-top:6px}
+.row.now .t{color:var(--c-brass)}
+/* The bell rings last: the brass dot arrives after the list has settled */
+.row.now .t::before{content:"";position:absolute;left:-26px;top:13px;width:10px;height:10px;border-radius:var(--r-dot);background:var(--c-brass);transform:scale(0);transition:transform 0ms}
+.hub[data-mode="active"] .row.now .t::before{transform:scale(1);transition:transform 420ms var(--ease-press) 760ms}
+.sub{margin-top:26px;padding-top:22px;border-top:1px solid var(--c-hairline);font:500 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.row.peek{border-top:0;padding-top:16px}
+.row.peek .w{font-size:32px;color:var(--c-soft)}
+
+.side{left:812px;top:160px;width:395px}
+.sec{padding:22px 0 30px;border-top:1px solid var(--c-hairline)}
+.sec .l{font:500 var(--fs-label)/1 var(--font);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.sec .t{font:500 44px/1.08 var(--font);letter-spacing:-.015em;margin-top:16px}
+.sec .p{font:400 var(--fs-detail)/1.35 var(--font);color:var(--c-soft);margin-top:12px}
+.sec .big{font:500 72px/1 var(--font);letter-spacing:-.035em;margin-top:16px}
+.stale{display:inline-flex;align-items:center;gap:10px;margin-top:18px;font:400 var(--fs-label)/1 var(--font);color:var(--c-soft)}
+.stale::before{content:"";width:9px;height:9px;border-radius:var(--r-dot);box-shadow:inset 0 0 0 1.5px var(--c-soft)}
+
+/* ---------- NIGHT ---------- */
+.nightclock{position:absolute;left:var(--sp-edge);bottom:48px;font:500 170px/.8 var(--font);letter-spacing:var(--tracking-clock);color:var(--c-night);opacity:0;transition:opacity var(--dur-night) var(--ease-out)}
+.hub[data-mode="night"] .stack,.hub[data-mode="night"] .scrim,.hub[data-mode="night"] .amb,.hub[data-mode="night"] .clockwrap{opacity:0;transition:opacity var(--dur-night) var(--ease-out)}
+.hub[data-mode="night"] .nightclock{opacity:1;transition-delay:600ms}
+
+/* ---------- SPEC sheet (#spec): review artefact, not wall UI, so small type is fine here ---------- */
+.spec{position:absolute;inset:0;z-index:30;display:none;background:#F4F1EA;color:#1D1B18;padding:30px 40px;font:400 14px/1.4 var(--font)}
+.hub[data-view="spec"] .spec{display:grid;grid-template-columns:470px minmax(0,1fr);gap:34px}
+.spec>div{min-width:0}
+.spec h1{font:600 26px/1 var(--font);letter-spacing:-.01em}
+.spec h2{font:600 11.5px/1 var(--font);letter-spacing:.14em;text-transform:uppercase;color:#6B6358;margin:16px 0 8px}
+.spec .lede{color:#5A534A;margin-top:8px}
+.sw{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sw div{border-radius:6px;padding:18px 8px 6px;font:500 11.5px/1.25 var(--font);color:#1D1B18;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.sw div span{display:block;font-weight:400;color:#6B6358}
+.ts{display:grid;grid-template-columns:auto 1fr auto;gap:0 14px;align-items:baseline}
+.ts .n{color:#6B6358;font-size:12.5px}.ts .v{font-variant-numeric:tabular-nums;font-size:12.5px;color:#6B6358}
+.mt td,.mt th,.pt td,.pt th{text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:12.5px;vertical-align:baseline}
+.mt,.pt{border-collapse:collapse;width:100%}
+.pt th,.mt th{font-weight:600;color:#6B6358;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.mt{table-layout:fixed}.mt td:first-child{white-space:nowrap;width:132px}.mt td:nth-child(2){width:64px}.ts span{line-height:1.05}
+.ok{color:#1F6B3A;font-weight:600}.bad{color:#B3261E;font-weight:600}
+.chip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.foot{margin-top:12px;color:#5A534A;font-size:12.5px}
+
+/* ---------- Mockup chrome (press H), hidden so screenshots stay honest ---------- */
+.hud{position:fixed;left:12px;top:12px;z-index:40;display:none;gap:6px;flex-wrap:wrap;max-width:760px;padding:8px;border-radius:12px;background:rgb(20 18 16 / .86);font:500 13px/1 system-ui}
+body.hud-on .hud{display:flex}
+.hud button{font:inherit;color:#eee;background:rgb(255 255 255 / .1);border:0;border-radius:8px;padding:8px 10px;cursor:pointer;transition:transform var(--dur-press) var(--ease-press)}
+.hud button:active{transform:scale(.95)}
+.hud button:focus-visible{outline:2px solid var(--c-brass);outline-offset:2px}
+
+@media (prefers-reduced-motion: reduce){
+  :root{--settle-from:none;--recede-scale:1}
+  .ph,.ph.on,.amb,.act,.clockwrap,.caption,.row,.scrim,.dim,.nightclock{transition-property:opacity!important;transition-duration:320ms!important;transition-delay:0ms!important}
+  .hub[data-mode="active"] .clockwrap{transform:translateY(-669px) scale(.42)} /* jumps, then fades in place */
+  .row.now .t::before{transform:scale(1)!important}
+}
+</style>
+</head>
+<body>
+<div class="hub" id="hub" tabindex="0" data-mode="ambient" data-layout="left" aria-label="Homeroom hub. Tap to show today; it returns to the photo after 5 minutes idle.">
+
+  <div class="stack" id="stack"></div>
+  <div class="scrim" id="scrim"></div>
+  <div class="dim"></div>
+
+  <div class="drift">
+    <div class="left">
+      <p class="caption amb" id="caption" data-t="caption" data-tier="label">Three Octobers ago</p>
+      <div class="clockwrap">
+        <div class="eyebrow" id="eyebrow" data-t="soft" data-tier="label">Monday · 2 November</div>
+        <div class="clock" data-t="chalk" data-tier="clock">7:42</div>
+      </div>
+    </div>
+    <div class="right amb">
+      <div class="wx"><b data-t="chalk" data-tier="glance">14°</b><span data-t="soft" data-tier="approach">Partly cloudy</span></div>
+      <div class="label" data-t="brass" data-tier="label">Next · 8:15</div>
+      <div class="next" data-t="chalk" data-tier="glance">School run</div>
+      <div class="place" data-t="soft" data-tier="approach">Leave by 8:05</div>
+    </div>
+
+    <!-- Active: today comes forward -->
+    <div class="act head" style="--i:0">
+      <div class="label bell"><span class="dot"></span><span data-t="brass" data-tier="label" data-a="1">Morning Bell</span></div>
+      <div class="d" data-t="soft" data-tier="approach" data-a="1">Monday 2 November</div>
+    </div>
+    <section class="act today" style="--i:1" aria-label="Today">
+      <div class="row now"><span class="t tnum" data-t="brass" data-tier="approach" data-a="1">8:15</span><span class="w"><span data-t="chalk" data-tier="approach" data-a="1">School run</span><small data-t="soft" data-tier="approach" data-a="1">Leave by 8:05</small></span></div>
+      <div class="row"><span class="t tnum" data-t="soft" data-tier="approach" data-a="1">12:30</span><span class="w">Dentist<small>Downtown clinic</small></span></div>
+      <div class="row"><span class="t tnum">15:45</span><span class="w">Swim lessons<small>Bring towels</small></span></div>
+      <div class="row"><span class="t tnum">19:30</span><span class="w">Book club</span></div>
+      <div class="sub" data-t="soft" data-tier="label" data-a="1">Tomorrow</div>
+      <div class="row peek"><span class="t tnum">7:30</span><span class="w">Recycling goes out</span></div>
+    </section>
+    <aside class="act side" style="--i:3" aria-label="Dinner and weather">
+      <div class="sec"><div class="l">Tonight’s dinner</div><div class="t" data-t="chalk" data-tier="approach" data-a="1">Tomato soup &amp; grilled cheese</div><div class="p">On the table at 6:30</div></div>
+      <div class="sec"><div class="l">Weather</div><div class="big">14°</div><div class="p">Partly cloudy, rain after 4<br>H 17 · L 9</div><div class="stale" data-t="soft" data-tier="label" data-a="1">as of 6:10</div></div>
+    </aside>
+  </div>
+
+  <div class="drift"><div class="nightclock" data-t="night">11:48</div></div>
+
+  <section class="spec" id="spec" aria-label="Tokens and legibility proof">
+    <div>
+      <h1>B · Full Bleed — tokens v0.1</h1>
+      <p class="lede">Everything here is read live from the <code>:root</code> tokens. Dev lifts that block into <code>tokens.css</code>/<code>tokens.json</code>.</p>
+      <h2>Palette (brass = “now / next”, never decoration)</h2>
+      <div class="sw" id="swatches"></div>
+      <h2>Type · Schibsted Grotesk, one family</h2>
+      <div class="ts" id="typescale"></div>
+      <h2>Motion · transform + opacity only</h2>
+      <table class="mt"><tbody id="motion"></tbody></table>
+    </div>
+    <div>
+      <h1>Legibility proof, measured</h1>
+      <p class="lede">For every text run on the wall: its real on-screen box (via <code>Range.getClientRects</code>) is sampled on a 5×3 grid against the scrim maths that also <em>generates</em> the CSS. Worst-case = the photo pixel under it is pure white. AA body 4.5:1, large (≥24px) 3:1.</p>
+      <table class="pt"><thead><tr><th>State</th><th>Text</th><th>Size</th><th>Floor</th><th>Min scrim α</th><th>Worst ratio</th><th>AA</th></tr></thead><tbody id="proof"></tbody></table>
+      <p class="foot" id="foot"></p>
+    </div>
+  </section>
+</div>
+
+<div class="hud" role="toolbar" aria-label="Mockup controls">
+  <button data-go="ambient">Ambient</button><button data-go="active">Active</button><button data-go="settle">Settle loop</button>
+  <button data-go="bright">Bright photo</button><button data-go="quiet-corner">What if: quiet corner</button><button data-go="quiet-corner-off">…without it</button>
+  <button data-go="recess">Recess</button><button data-go="night">Night</button><button data-go="spec">Tokens + proof</button>
+  <button data-act="next">Next photo (N)</button><button data-act="mode">Ambient ⇄ Active (Space / tap)</button>
+</div>
+
+<script>
+/* Placeholder photos only (picsum). Never household images. */
+const W = 1263, H = 841;
+const pic = id => `https://picsum.photos/id/${id}/1900/1266`;
+const CAPTIONS = { 1016:"Three Octobers ago", 1018:"Last spring", 1044:"Two autumns ago", 1019:"This week, four years ago",
+                   1036:"Winter, five years ago", 1057:"Two summers ago", 129:"The boardwalk, last August" };
+const LOOP = [1016,1018,1044,1019];
+
+/* ---- Scrim pools: ONE source of truth. Generates the CSS and drives the proof. ---- */
+const S = [10,9,8];
+/* Eased tail (plateau → smooth falloff) so the edge never reads as a shape, even over a pale photo */
+/* Eased tail (plateau → smooth falloff) so the edge never reads as a shape, even over a pale photo.
+   Pools are sized to the text block they sit under, no bigger: the middle of the photo stays clear (α ≈ .10). */
+const POOL_STOPS = [[0,.76],[.74,.71],[.83,.5],[.92,.2],[1,0]];
+const BASE = [[0,.2],[260,.16],[460,0]];
+const SCRIM = {
+  left:  { base:BASE, pools:[{x:0,y:H,rx:760,ry:620,s:POOL_STOPS},{x:W,y:H,rx:780,ry:560,s:POOL_STOPS}] },
+  right: { base:BASE, pools:[{x:W,y:H,rx:760,ry:620,s:POOL_STOPS},{x:0,y:H,rx:780,ry:560,s:POOL_STOPS}] },
+  recess:{ base:[[0,.14],[200,.1],[360,0]], pools:[{x:0,y:H,rx:900,ry:420,s:POOL_STOPS}] },
+};
+const rgba = a => `rgb(10 9 8 / ${a})`;
+function scrimCSS(cfg){
+  const pools = cfg.pools.map(p=>`radial-gradient(ellipse ${p.rx}px ${p.ry}px at ${p.x}px ${p.y}px, ${p.s.map(([o,a])=>`${rgba(a)} ${o*100}%`).join(', ')})`);
+  const base = `linear-gradient(to top, ${cfg.base.map(([px,a])=>`${rgba(a)} ${px}px`).join(', ')})`;
+  return [...pools, base].join(',');
+}
+const lerpStops = (stops,v)=>{ if(v>=stops[stops.length-1][0]) return stops[stops.length-1][1];
+  for(let i=1;i<stops.length;i++){ const [o0,a0]=stops[i-1],[o1,a1]=stops[i]; if(v<=o1) return a0+(a1-a0)*((v-o0)/(o1-o0)); } return 0; };
+function alphaAt(cfg,x,y){
+  let keep = 1 - lerpStops(cfg.base, H - y);
+  cfg.pools.forEach(p=>{ const d=Math.hypot((x-p.x)/p.rx,(y-p.y)/p.ry); keep *= 1 - (d>=1?0:lerpStops(p.s,d)); });
+  return 1 - keep;
+}
+
+const hub = document.getElementById('hub'), stack = document.getElementById('stack'), scrim = document.getElementById('scrim'), cap = document.getElementById('caption');
+function scrimKey(){ return hub.dataset.recess!==undefined ? 'recess' : hub.dataset.layout; }
+function applyScrim(){ scrim.style.background = scrimCSS(SCRIM[scrimKey()]); }
+
+/* ---- The settle ----
+   Incoming: scale(1.035) translateY(8px), opacity 0 → rest (1400 / 1100ms, ease-settle).
+   Outgoing: HOLDS at full opacity underneath, removed at 1200ms. No brightness dip. */
+let current = null;
+function show(id, animate){
+  return new Promise(res=>{
+    const img = new Image(); img.className='ph'; img.alt=''; img.decoding='async';
+    img.onload = ()=>{
+      const old=[...stack.querySelectorAll('.ph')];
+      if(!animate){ img.classList.add('snap','on'); stack.appendChild(img); old.forEach(o=>o.remove()); requestAnimationFrame(()=>img.classList.remove('snap')); current=id; return res(); }
+      old.forEach(o=>{ o.classList.add('snap','hold'); o.classList.remove('on'); });
+      stack.appendChild(img); img.getBoundingClientRect();
+      requestAnimationFrame(()=>{ img.classList.add('on'); setTimeout(()=>old.forEach(o=>o.remove()), 1200); });
+      cap.classList.add('swap'); setTimeout(()=>{ cap.textContent = CAPTIONS[id]||''; cap.classList.remove('swap'); }, 700);
+      current=id; setTimeout(res, 1450);
+    };
+    img.onerror = ()=>res();   /* production: keep last good photo, never blank */
+    img.src = pic(id);
+  });
+}
+let loopTimer=null, li=0;
+function nextPhoto(){ li=(li+1)%LOOP.length; return show(LOOP[li], true); }
+
+/* ---- Router: every state is a hash ---- */
+const STATES = {
+  'ambient':          {photo:1016, mode:'ambient', layout:'left'},
+  'active':           {photo:1016, mode:'active',  layout:'left'},
+  'settle':           {photo:1016, mode:'ambient', layout:'left', loop:true},
+  'bright':           {photo:1036, mode:'ambient', layout:'left'},
+  'quiet-corner':     {photo:1057, mode:'ambient', layout:'right'},
+  'quiet-corner-off': {photo:1057, mode:'ambient', layout:'left'},
+  'recess':           {photo:129,  mode:'ambient', layout:'left', recess:true},
+  'night':            {photo:1016, mode:'night',   layout:'left'},
+  'spec':             {photo:1016, mode:'ambient', layout:'left', spec:true},
+};
+async function route(){
+  const key = (location.hash||'#ambient').slice(1); const st = STATES[key]||STATES.ambient;
+  clearInterval(loopTimer);
+  hub.dataset.layout = st.layout;
+  if(st.recess){ hub.dataset.recess=''; document.getElementById('eyebrow').textContent='Recess · Saturday'; hub.querySelector('.clock').textContent='4:12'; }
+  else { delete hub.dataset.recess; document.getElementById('eyebrow').textContent='Monday · 2 November'; hub.querySelector('.clock').textContent='7:42'; }
+  applyScrim();
+  if(current!==st.photo){ cap.textContent = CAPTIONS[st.photo]||''; await show(st.photo,false); li=Math.max(0,LOOP.indexOf(st.photo)); }
+  hub.dataset.mode = st.mode;
+  if(st.spec){ hub.dataset.view='spec'; buildSpec(); } else delete hub.dataset.view;
+  if(st.loop) loopTimer = setInterval(nextPhoto, 5200);
+}
+window.addEventListener('hashchange', route);
+
+/* ---- Interaction: tap toggles Ambient ⇄ Active. Active returns after ~5 min idle (production). ---- */
+let idle=null;
+function toggle(){
+  if(hub.dataset.view==='spec' || hub.dataset.mode==='night'){ if(hub.dataset.mode==='night'){ hub.dataset.mode='active'; } return; }
+  hub.dataset.mode = hub.dataset.mode==='active' ? 'ambient' : 'active';
+  clearTimeout(idle); if(hub.dataset.mode==='active') idle=setTimeout(()=>hub.dataset.mode='ambient', 5*60*1000);
+}
+hub.addEventListener('click', toggle);
+document.addEventListener('keydown', e=>{
+  const k=e.key.toLowerCase();
+  if(k==='h') document.body.classList.toggle('hud-on');
+  if(k===' '||k==='enter'){ e.preventDefault(); toggle(); }
+  if(k==='n') nextPhoto();
+});
+document.querySelectorAll('.hud [data-go]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); location.hash=b.dataset.go; });
+document.querySelector('.hud [data-act=next]').onclick=e=>{ e.stopPropagation(); nextPhoto(); };
+document.querySelector('.hud [data-act=mode]').onclick=e=>{ e.stopPropagation(); toggle(); };
+
+/* ---- Contrast maths (WCAG 2.x) ---- */
+const lin=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+const lum=([r,g,b])=>.2126*lin(r)+.7152*lin(g)+.0722*lin(b);
+const ratio=(a,b)=>{const A=lum(a),B=lum(b);return (Math.max(A,B)+.05)/(Math.min(A,B)+.05)};
+const hex=h=>{h=h.trim().replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16))};
+const over=(fg,a,bg)=>fg.map((v,i)=>v*a+bg[i]*(1-a));
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* Measure every [data-t] text run in a given state, against the scrim it actually sits on. */
+function measure(state){
+  const saved = {mode:hub.dataset.mode, layout:hub.dataset.layout, recess:hub.dataset.recess, view:hub.dataset.view};
+  hub.classList.add('notrans'); delete hub.dataset.view;
+  hub.dataset.mode = state.mode; hub.dataset.layout = state.layout;
+  if(state.recess) hub.dataset.recess=''; else delete hub.dataset.recess;
+  document.querySelectorAll('.drift').forEach(d=>d.style.animationPlayState='paused');
+  const cfg = SCRIM[state.recess?'recess':state.layout];
+  const out=[];
+  const sel = state.mode==='active' ? '[data-t][data-a]' : '.drift [data-t]:not([data-a]):not([data-t=night])';
+  document.querySelectorAll(sel).forEach(el=>{
+    if(state.recess && el.closest('.right')) return;
+    const r = document.createRange(); r.selectNodeContents(el);
+    let minA = 1;
+    [...r.getClientRects()].forEach(b=>{
+      for(let i=0;i<5;i++) for(let j=0;j<3;j++){
+        const x=b.left+b.width*i/4, y=b.top+b.height*j/2;
+        const a = state.mode==='active' ? parseFloat(tok('--scrim-active')) : alphaAt(cfg,x,y);
+        minA=Math.min(minA,a);
+      }
+    });
+    const fg = hex(tok({chalk:'--c-chalk',soft:'--c-soft',brass:'--c-brass',caption:'--c-soft'}[el.dataset.t]));
+    const worst = Math.min(ratio(fg, over(S,minA,[255,255,255])), ratio(fg, over(S,minA,[0,0,0])));
+    const size = parseFloat(getComputedStyle(el).fontSize);
+    out.push({state:state.name, text:el.textContent.trim().replace(/\s+/g,' ').slice(0,26), fg, size, tier:el.dataset.tier, minA, worst});
+  });
+  Object.assign(hub.dataset, {mode:saved.mode, layout:saved.layout}); if(saved.recess!==undefined) hub.dataset.recess=''; else delete hub.dataset.recess;
+  if(saved.view) hub.dataset.view=saved.view;
+  document.querySelectorAll('.drift').forEach(d=>d.style.animationPlayState='');
+  hub.getBoundingClientRect(); hub.classList.remove('notrans');
+  return out;
+}
+const FLOOR = {clock:'--floor-clock', glance:'--floor-glance', approach:'--floor-approach', label:'--floor-any'};
+
+function buildSpec(){
+  const sw=[['--c-chalk','Chalk','text'],['--c-soft','Soft','secondary'],['--c-brass','Brass','now / next'],['--c-night','Night','clock in the dark']];
+  document.getElementById('swatches').innerHTML = sw.map(([n,l,u])=>`<div style="background:${tok(n)}${n==='--c-night'?';color:#F4F1EA':''}">${l} <span${n==='--c-night'?' style="color:#E6DED0"':''}>${tok(n)} · ${u}</span></div>`).join('')
+    + `<div style="background:rgb(10 9 8);color:#eee">Scrim <span style="color:#bbb">rgb(10 9 8) · α ≥ ${tok('--scrim-min')}</span></div>`
+    + `<div style="background:rgb(10 9 8 / .8);color:#eee">Active dim <span style="color:#bbb">α ${tok('--scrim-active')}</span></div>`
+    + `<div style="background:#2a2724;color:#eee;box-shadow:inset 0 -1px 0 rgb(247 244 238 / .16)">Hairline <span style="color:#bbb">chalk / .16</span></div>`
+    + `<div style="background:#0A0908;color:#eee">Ground <span style="color:#bbb">${tok('--c-ground')}</span></div>`;
+  const ts=[['--fs-clock','Clock (Ambient)'],['--fs-clock-small','Clock (Recess) = floor'],['--fs-glance','Glance: next, temp'],['--fs-title','Active titles'],['--fs-body','Active times'],['--fs-detail','Detail (approach floor)'],['--fs-caption','Yearbook caption'],['--fs-label','Label = absolute floor']];
+  document.getElementById('typescale').innerHTML = ts.map(([n,l])=>`<span class="n">${n}</span><span style="font:500 ${Math.min(parseFloat(tok(n)),20)}px/1.2 var(--font);letter-spacing:-.01em;white-space:nowrap">${l}</span><span class="v">${tok(n)}</span>`).join('');
+  const mt=[['Photo settle','--dur-settle','in: scale 1.035 +8px → rest (opacity 1100); out: holds, removed at 1200'],['Ambient → Active','--dur-mode','clock flies (translate+scale .42); rows +55ms stagger after 180'],['Active → Ambient','--dur-exit','all out together, no stagger'],['“Now” dot','420ms','ease-press, after the list settles'],['Tap','--dur-press','scale .985 · ease-press'],['Night','--dur-night','photo fades; dim clock in after 600'],['Burn-in drift','--drift-cycle','8 steps ≤14px, all overlays incl. Night'],['Reduced motion','320ms','opacity only; drift stays (steps)']];
+  document.getElementById('motion').innerHTML = mt.map(([a,n,c])=>`<tr><td><b>${a}</b></td><td class="tnum">${n.startsWith('--')?tok(n):n}</td><td>${c}</td></tr>`).join('')
+    + `<tr><td colspan="3" style="color:#6B6358;white-space:normal">settle ${tok('--ease-settle')} · press ${tok('--ease-press')} · out ${tok('--ease-out')}</td></tr>`;
+  const rows = [
+    ...measure({name:'Ambient',mode:'ambient',layout:'left'}),
+    ...measure({name:'Quiet corner',mode:'ambient',layout:'right'}).filter(r=>r.tier==='clock'||r.text.startsWith('School')),
+    ...measure({name:'Recess',mode:'ambient',layout:'left',recess:true}).filter(r=>r.tier!=='glance'),
+    ...measure({name:'Active',mode:'active',layout:'left'}),
+  ];
+  let fails=0;
+  const n=hex(tok('--c-night')), nr=ratio(n,[10,9,8]);
+  document.getElementById('proof').innerHTML = rows.map(r=>{
+    const need = r.size>=24?3:4.5, ok=r.worst>=need && r.worst>=4.5, floorOk = r.size>=parseFloat(tok(FLOOR[r.tier])) && r.minA>=parseFloat(tok('--scrim-min'))-1e-9;
+    if(!ok||!floorOk) fails++;
+    return `<tr><td>${r.state}</td><td><span class="chip" style="background:rgb(${r.fg})"></span>${r.text}</td><td class="tnum">${r.size}px</td><td>${r.tier} ≥ ${parseFloat(tok(FLOOR[r.tier]))}</td><td class="tnum ${r.minA>=.72?'':'bad'}">${r.minA.toFixed(3)}</td><td class="tnum">${r.worst.toFixed(2)} : 1</td><td class="${ok&&floorOk?'ok':'bad'}">${ok&&floorOk?'AA ✓':'fail'}</td></tr>`;
+  }).join('') + `<tr><td>Night</td><td><span class="chip" style="background:${tok('--c-night')}"></span>Clock on ground</td><td>170px</td><td>clock ≥ 120</td><td>n/a</td><td class="tnum">${nr.toFixed(2)} : 1</td><td class="${nr>=3?'ok':'bad'}">${nr>=3?'AA large ✓':'fail'}</td></tr>`;
+  document.getElementById('foot').innerHTML = `<b>${rows.length+1} checks, ${fails} failing.</b> Every Ambient pair meets AA <em>body</em> (4.5:1), not just large-text, over a pure-white pixel. Dev's contrast test reads <code>tokens.json</code> + these pool definitions; this table is the reference output.`;
+}
+
+document.fonts.ready.then(route);
+</script>
+</body>
+</html>

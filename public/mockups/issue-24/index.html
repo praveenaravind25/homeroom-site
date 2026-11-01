@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, initial-scale=1">
+<title>Homeroom · #24 Quick add + event detail sheets · design direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens: copied 1:1 from app/src/styles/tokens.css v0.5 (Rail register + shared motion). ── */
+:root{
+  --c-chalk:#F7F4EE; --c-brass:#EDC67C; --c-ground:#0A0908;
+  --c-rail-ground:#12100E; --c-s1:#1C1916; --c-s2:#25211D; --c-s3:#2F2A25;
+  --c-rail-soft:#CFC8BB; --c-mute:#8F887D; --c-rail-hair:rgb(247 244 238 / .1);
+  --c-lamp:#F0D49B; --c-live:#E5534B;
+  --c-person-1:#D49A86; --c-person-2:#86B6A6; --c-person-3:#AFA0D6; --c-person-4:#B3BC85; --c-person-household:#9FB0C6;
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --rail-fs-label:13px; --rail-fs-meta:14px; --rail-fs-body:16px; --rail-fs-item:19px; --rail-fs-heading:24px; --rail-fs-title:28px;
+  --tracking-rail-label:.14em;
+  --r-card:22px; --r-tile:16px; --r-pill:999px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1); --ease-out:cubic-bezier(.4,0,.2,1);
+  --dur-rise:520ms; --dur-leave:280ms; --dur-press:180ms; --dur-indicator:320ms; --press-scale:.97;
+  --rail-rise-from:translateY(16px); --rail-stagger:50ms;
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+
+  /* ── NEW for #24 (proposed tokens; Dev adds to tokens.css + tokens.json + changelog v0.6) ── */
+  --sheet-w:500px;            /* the shell-provided sheet box */
+  --sheet-inset:16px;         /* sheet floats 16 px off the top/right/bottom edge */
+  --sheet-pad:28px;
+  --c-sheet-scrim:rgb(8 7 6 / .55);
+  --dur-sheet:420ms;          /* in: translateX(40px) → 0 + opacity, --ease-settle */
+  --sheet-from:translateX(40px);
+  --dur-scrim:380ms;
+  --dur-swap:240ms;           /* tab body swap: rise 8 px + fade */
+  --swap-from:translateY(8px);
+  --dur-land:600ms;           /* the pick travels to where it lives */
+  --dur-toast-in:320ms; --toast-from:translateY(16px); --toast-hold:2400ms;
+  --pick-h:56px;
+}
+@media (prefers-reduced-motion: reduce){
+  :root{ --sheet-from:none; --swap-from:none; --toast-from:none; --rail-rise-from:none; --press-scale:1;
+    --dur-sheet:320ms; --dur-scrim:320ms; --dur-indicator:0ms; --dur-land:0ms; --dur-rise:320ms; --rail-stagger:0ms; }
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{min-height:841px;display:flex;align-items:flex-start;justify-content:flex-start}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+#hub{position:relative;width:1263px;height:841px;overflow:hidden;background:var(--c-rail-ground);color:var(--c-chalk);user-select:none}
+.abs{position:absolute}
+svg{display:block;flex:none}
+
+/* ── shell (as built in #17) ── */
+.nav{left:0;top:0;bottom:0;width:104px;box-shadow:1px 0 0 var(--c-rail-hair);display:flex;flex-direction:column;align-items:center;padding:20px 0 16px;gap:4px}
+.nav-i{width:84px;padding:10px 0;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:var(--rail-fs-label);font-weight:600;color:var(--c-rail-soft)}
+.nav-i.on{background:var(--c-s2);color:var(--c-chalk)}
+.nav-ph{width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:var(--rail-fs-label);font-weight:600;color:var(--c-rail-soft)}
+.nav-ph{border-radius:14px}
+.nav-ph img{width:72px;height:48px;border-radius:10px;object-fit:cover}
+.hdr{left:128px;right:24px;top:22px;height:60px;display:flex;align-items:center;gap:14px}
+.hdr-t{font-size:var(--rail-fs-title);font-weight:650;letter-spacing:-.01em;line-height:1.15}
+.hdr-s{font-size:var(--rail-fs-body);color:var(--c-rail-soft)}
+.av{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-pill);font-weight:700;color:var(--c-rail-ground);flex:none;line-height:1}
+.icn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--r-pill);background:var(--c-s2);flex:none}
+.badge{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;border-radius:9px;background:var(--c-brass);color:var(--c-rail-ground);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:var(--r-pill);background:var(--c-s2);font-size:var(--rail-fs-body);font-weight:600;min-height:44px;white-space:nowrap}
+.btn.pri{background:var(--c-chalk);color:var(--c-rail-ground)}
+.press{transition:transform var(--dur-press) var(--ease-press)}
+.press:active{transform:scale(var(--press-scale))}
+
+/* ── Today (context only, simplified from #17) ── */
+.content{left:128px;top:100px;width:1111px;height:717px;display:grid;grid-template-columns:470px 290px 1fr;gap:16px}
+.card{background:var(--c-s1);border-radius:var(--r-card);padding:20px 22px;overflow:hidden;min-height:0}
+.col{display:flex;flex-direction:column;gap:16px;min-height:0}
+.lab{font-size:var(--rail-fs-label);letter-spacing:var(--tracking-rail-label);font-weight:650;color:var(--c-mute);text-transform:uppercase}
+.more{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;gap:10px}
+.go{display:flex;align-items:center;gap:2px;font-size:var(--rail-fs-meta);color:var(--c-rail-soft);min-height:32px}
+.ev{display:grid;grid-template-columns:78px 4px minmax(0,1fr);gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--c-rail-hair);width:100%}
+.ev:last-child{border-bottom:0}
+.ev .t{font-size:var(--rail-fs-body);color:var(--c-rail-soft)}
+.ev .bar{align-self:stretch;border-radius:4px}
+.ev .ti{font-size:var(--rail-fs-item);font-weight:550}
+.ev .sub{font-size:var(--rail-fs-meta);color:var(--c-mute);margin-top:2px}
+.ev.past .t,.ev.past .ti{color:var(--c-mute)}
+.ev.now .t{color:var(--c-brass);font-weight:650}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:var(--r-pill);background:var(--c-s2);font-size:var(--rail-fs-body);min-height:36px}
+.chore{display:flex;align-items:center;gap:12px;width:100%;padding:8px 0;min-height:44px}
+.chk{width:28px;height:28px;border-radius:var(--r-pill);box-shadow:inset 0 0 0 2px var(--c-s3);display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--c-rail-ground)}
+.chore.done .chk{background:var(--c-rail-soft);box-shadow:none}
+.chore.done .tx{color:var(--c-mute);text-decoration:line-through}
+.tx{font-size:var(--rail-fs-body)}
+.scene{display:flex;flex-direction:column;justify-content:space-between;gap:10px;background:var(--c-s2);border-radius:var(--r-tile);padding:14px;min-height:82px;font-size:var(--rail-fs-body);font-weight:550}
+.cam{position:relative;display:block;width:100%;border-radius:var(--r-tile);overflow:hidden;background:#000}
+.cam img{display:block;width:100%;height:100%;object-fit:cover;filter:grayscale(.65) contrast(1.15) brightness(.8)}
+.cam .tag{position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;background:rgb(0 0 0 / .55);padding:4px 8px;border-radius:6px}
+.cam .tag i{width:7px;height:7px;border-radius:9px;background:var(--c-live);display:block}
+.screen-rise{animation:rise var(--dur-rise) var(--ease-settle) both;animation-delay:calc(var(--i,0) * var(--rail-stagger))}
+@keyframes rise{from{opacity:0;transform:var(--rail-rise-from)}to{opacity:1;transform:none}}
+.still .screen-rise,.still .sheet,.still .scrim,.still .swap>*,.still .toast{animation:none!important}
+
+/* ── #24: the sheet ── */
+.scrim{position:absolute;inset:0;background:var(--c-sheet-scrim);z-index:20;animation:fade var(--dur-scrim) var(--ease-out) both;width:100%;height:100%;cursor:default}
+.scrim:focus-visible{box-shadow:none}
+.sheet{position:absolute;top:var(--sheet-inset);right:var(--sheet-inset);bottom:var(--sheet-inset);width:var(--sheet-w);background:var(--c-s1);border-radius:var(--r-card);
+  padding:var(--sheet-pad);z-index:21;display:flex;flex-direction:column;box-shadow:0 20px 60px rgb(0 0 0 / .5),inset 0 0 0 1px var(--c-rail-hair);
+  animation:sheetIn var(--dur-sheet) var(--ease-settle) both}
+@keyframes sheetIn{from{opacity:0;transform:var(--sheet-from)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.leaving .sheet{animation:none;transition:opacity var(--dur-leave) var(--ease-out),transform var(--dur-leave) var(--ease-out);opacity:0;transform:translateX(24px)}
+.leaving .scrim{animation:none;transition:opacity var(--dur-leave) var(--ease-out);opacity:0}
+.sh-top{display:flex;align-items:center;justify-content:space-between;min-height:44px;margin-bottom:20px}
+.sh-title{font-size:var(--rail-fs-title);font-weight:650;letter-spacing:-.01em}
+.sec{margin-top:18px}
+.sec .lab{display:block;margin-bottom:8px}
+
+/* segmented control: one chalk indicator that slides (transform only) */
+.seg{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--c-s2);border-radius:var(--r-pill);padding:4px;height:52px}
+.seg.sm{height:44px}
+.seg .ind{position:absolute;top:4px;left:4px;bottom:4px;border-radius:var(--r-pill);background:var(--c-chalk);transition:transform var(--dur-indicator) var(--ease-settle);z-index:0}
+.seg button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-pill);font-size:var(--rail-fs-body);font-weight:600;color:var(--c-rail-soft);transition:color var(--dur-indicator) var(--ease-settle)}
+.seg.sm button{font-size:var(--rail-fs-meta)}
+.seg button.on{color:var(--c-rail-ground)}
+.seg button:active{transform:scale(var(--press-scale))}
+.seg button{transition:transform var(--dur-press) var(--ease-press)}
+/* secondary selections (For / When / Day / Slot) are a chalk ring, so the tab stays the one filled choice */
+.seg.sm .ind{background:var(--c-s3);box-shadow:inset 0 0 0 2px var(--c-chalk)}
+.seg.sm button.on{color:var(--c-chalk)}
+.seg .ring{width:7px;height:7px;border-radius:var(--r-pill);box-shadow:inset 0 0 0 1.5px currentColor;flex:none}
+
+/* person picker: vertical cells so 4–6 members + Anyone always fit in 444 px */
+.ppl{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.pp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:72px;border-radius:var(--r-tile);background:var(--c-s2);font-size:var(--rail-fs-meta);font-weight:600;color:var(--c-rail-soft);transition:transform var(--dur-press) var(--ease-press)}
+.pp:active{transform:scale(var(--press-scale))}
+.pp.on{background:var(--c-s3);box-shadow:inset 0 0 0 2px var(--c-chalk);color:var(--c-chalk)}
+.pp .av{width:30px;height:30px;font-size:14px}
+.pp .any{width:30px;height:30px;border-radius:var(--r-pill);box-shadow:inset 0 0 0 2px var(--c-person-household);display:flex;align-items:center;justify-content:center;color:var(--c-person-household)}
+
+/* quick picks */
+.picks-wrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:18px}
+.picks-wrap>.lab{margin-bottom:10px}
+.picks{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:6px;margin:-6px;
+  -webkit-mask-image:linear-gradient(#000 calc(100% - 28px),transparent);mask-image:linear-gradient(#000 calc(100% - 28px),transparent);padding-bottom:28px}
+.picks::-webkit-scrollbar{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid3 .pick{min-height:64px}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--pick-h);padding:8px 10px 8px 16px;border-radius:var(--r-tile);background:var(--c-s2);
+  font-size:var(--rail-fs-body);font-weight:600;line-height:1.2;transition:transform var(--dur-press) var(--ease-press),opacity 120ms var(--ease-out)}
+.pick:active,.pick.pressed{transform:scale(var(--press-scale))}
+.pick .plus{width:30px;height:30px;border-radius:var(--r-pill);background:var(--c-s3);display:flex;align-items:center;justify-content:center;color:var(--c-rail-soft);flex:none}
+.pick.lifted{opacity:0}
+/* variant A · rows (the reference) */
+.rows .pick{width:100%;background:none;border-radius:0;border-bottom:1px solid var(--c-rail-hair);font-size:var(--rail-fs-item);font-weight:500;padding:8px 2px;min-height:58px}
+.rows .pick .plus{background:none}
+/* variant C · flowing chips */
+.flow{display:flex;flex-wrap:wrap;gap:8px}
+.flow .pick{border-radius:var(--r-pill);min-height:48px;padding:6px 8px 6px 18px}
+.flow .pick .plus{width:28px;height:28px}
+.foot{font-size:var(--rail-fs-meta);color:var(--c-mute);margin-top:8px}
+.note{font-size:var(--rail-fs-meta);color:var(--c-rail-soft);display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.note .ring{width:7px;height:7px;border-radius:var(--r-pill);box-shadow:inset 0 0 0 1.5px currentColor;flex:none;margin-top:6px}
+.current{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:12px 16px;border-radius:var(--r-tile);background:var(--c-s2);font-size:var(--rail-fs-body)}
+.current b{font-weight:650}
+.current span{color:var(--c-mute);font-size:var(--rail-fs-meta)}
+.empty{margin:auto 0;padding:24px;border-radius:var(--r-tile);box-shadow:inset 0 0 0 1.5px var(--c-s3);text-align:left}
+.empty .h{font-size:var(--rail-fs-item);font-weight:600}
+.empty p{font-size:var(--rail-fs-body);color:var(--c-rail-soft);line-height:1.45;margin:8px 0 0}
+.swap>*{animation:swap var(--dur-swap) var(--ease-settle) both}
+@keyframes swap{from{opacity:0;transform:var(--swap-from)}to{opacity:1;transform:none}}
+
+/* event detail */
+.det-bar{width:56px;height:6px;border-radius:6px;margin:4px 0 18px}
+.det-title{font-size:var(--rail-fs-title);font-weight:650;line-height:1.15;letter-spacing:-.015em}
+.det-rows{margin-top:22px;display:flex;flex-direction:column}
+.det-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--c-rail-hair);font-size:var(--rail-fs-item)}
+.det-row .k{width:36px;height:36px;border-radius:var(--r-pill);background:var(--c-s2);display:flex;align-items:center;justify-content:center;color:var(--c-rail-soft);flex:none}
+.det-row .s{font-size:var(--rail-fs-meta);color:var(--c-mute);margin-top:2px}
+.det-act{display:flex;gap:10px;margin-top:auto}
+.det-act .btn{flex:1;min-height:56px;font-size:var(--rail-fs-body)}
+
+/* toast: lives in the header's free span (between the title and who's-home), so it never covers a card
+   or the place the item just landed. With a sheet open, it centres in the span left of the sheet. */
+.toastwrap{position:absolute;left:430px;right:372px;top:22px;height:60px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:30}
+.toastwrap.with-sheet{left:128px;right:532px}
+.toast .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 22px 8px 10px;border-radius:var(--r-pill);background:var(--c-chalk);color:var(--c-rail-ground);
+  font-size:var(--rail-fs-body);font-weight:600;box-shadow:0 14px 40px rgb(0 0 0 / .45);animation:toastIn var(--dur-toast-in) var(--ease-settle) both}
+.toast .ok{width:32px;height:32px;border-radius:var(--r-pill);background:var(--c-rail-ground);color:var(--c-chalk);display:flex;align-items:center;justify-content:center}
+.toast.err{background:var(--c-s2);color:var(--c-chalk);box-shadow:inset 0 0 0 2px var(--c-brass),0 14px 40px rgb(0 0 0 / .45);padding:6px 6px 6px 20px}
+.toast.err .dot{width:9px;height:9px;border-radius:var(--r-pill);background:var(--c-brass);flex:none}
+.toast.err .sub{display:block;color:var(--c-rail-soft);font-weight:500;font-size:var(--rail-fs-meta);margin-top:1px}
+.toast.err{min-height:56px}
+.toast.err .btn{min-height:44px;padding:8px 18px}
+.toast.err .icn{width:44px;height:44px;background:transparent;color:var(--c-rail-soft)}
+.toast.out{animation:none;transition:opacity var(--dur-leave) var(--ease-out),transform var(--dur-leave) var(--ease-out);opacity:0;transform:translateY(8px)}
+@keyframes toastIn{from{opacity:0;transform:var(--toast-from)}to{opacity:1;transform:none}}
+
+/* the landing (the signature moment) */
+.ghost{position:absolute;z-index:25;display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:var(--r-tile);background:var(--c-s2);font-size:var(--rail-fs-body);font-weight:600;
+  box-shadow:0 18px 40px rgb(0 0 0 / .45);transition:transform var(--dur-land) var(--ease-settle);will-change:transform;white-space:nowrap}
+.ghost .bg{position:absolute;inset:0;border-radius:inherit;background:var(--c-s2);box-shadow:0 18px 40px rgb(0 0 0 / .45);transition:opacity var(--dur-land) var(--ease-out)}
+.ghost span{position:relative}
+.landed .av{animation:pin 420ms var(--ease-press) both}
+.landed .tx{animation:fade 200ms var(--ease-out) both}
+@keyframes pin{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+.tick{display:inline-block;animation:tick 380ms var(--ease-press) both}
+@keyframes tick{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .landed .av{animation:fade 320ms linear both}
+  .tick{animation:fade 320ms linear both}
+}
+</style>
+</head>
+<body>
+<div id="hub"></div>
+<script>
+// ───────── placeholder household (no real names; slots come from config in the app) ─────────
+const P = {
+  A:{n:'Alex', c:'var(--c-person-1)'}, S:{n:'Sam', c:'var(--c-person-2)'},
+  M:{n:'Maya', c:'var(--c-person-3)'}, T:{n:'Theo', c:'var(--c-person-4)'},
+  H:{n:'Household', c:'var(--c-person-household)'}};
+const PEOPLE = ['A','S','M','T'];
+const AWAY = {S:true, M:true};
+const PICKS = {   // what GET /quick-add returns: recents first, then config, deduped, capped
+  chore:['Water the plants','Empty dishwasher','Take out recycling','Feed the cat','Tidy the living room','Fold laundry','Wipe the counters','Walk the dog','Change the sheets','Vacuum the stairs'],
+  grocery:['Bananas','Yogurt','Milk','Eggs','Bread','Cheese','Tortillas','Coffee','Dish soap','Apples','Pasta','Butter'],
+  todo:['Call the plumber','Book flu shots','Return library books','Pack gym bag','Charge the car','Renew registration'],
+  meal:['Tacos','Stir fry','Soup & bread','Pizza night','Pasta bake','Leftovers','Curry','Burgers']};
+const DAYS = ['Today','Tomorrow','Thu','Fri','Sat','Sun'];
+const MEAL_DAYS = ['Today','Wed','Thu','Fri','Sat','Sun','Mon'];
+const SLOTS = ['Breakfast','Lunch','Dinner'];
+const TABS = [['chore','Chore'],['grocery','Grocery'],['todo','To-do'],['meal','Meal'],['event','Event']];
+const EVENTS = [
+  {id:'e1',time:'8:30 AM',t:'School drop-off',w:'S',place:'Oak St Elementary',past:1},
+  {id:'r1',time:'9:00 AM',t:'Pay water bill',w:'A',kind:'reminder',past:1},
+  {id:'e2',time:'10:00 AM',t:'Coffee with Priya',w:'A',place:'Corner café',now:1,end:'11:00 AM'},
+  {id:'e3',time:'11:00 AM',t:'Library story time',w:'T',place:'Main library'},
+  {id:'e4',time:'12:00 PM',t:'Team lunch',w:'S'},
+  {id:'e5',time:'3:00 PM',t:'Pick up Maya',w:'S',place:'Oak St Elementary'},
+  {id:'e6',time:'4:00 PM',t:'Piano lesson',w:'M',place:'Ms. Ortiz'}];
+const BASE_CHORES = [
+  {t:'Feed the cat',w:'M',done:1},{t:'Make bed',w:'T',done:1},{t:'Bins out tonight',w:'S'},
+  {t:'Unload dishwasher',w:'S'},{t:'Toys away before dinner',w:'T'}];
+
+// ───────── icons (the house set from rail-v1) ─────────
+const PATHS = {
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  week:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  meals:'<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8a2 2 0 0 1-2 2M17 21V3c-2.5 1.5-3 5-3 8h3"/>',
+  list:'<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  chores:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>',
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  cam:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/>',
+  door:'<path d="M14 3H6v18h8M14 3l5 2v14l-5 2zM11 12h.01"/>', film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>', chev:'<path d="M9 6l6 6-6 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>', bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/>',
+  pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>',
+  qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M14 18v3"/>'};
+const I = (n,s=22,w=2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[n]}</svg>`;
+const av = (k,s=30,away=false) => `<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.45)}px;${away?`background:transparent;box-shadow:inset 0 0 0 2px ${P[k].c};color:${P[k].c}`:`background:${P[k].c}`}">${P[k].n[0]}</span>`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ───────── state ─────────
+const S = { sheet:null, tab:'chore', who:null, day:0, mday:0, slot:2, variant:'tiles', unavailable:false, empty:false,
+  detail:null, chores:BASE_CHORES.slice(), groceries:6, todos:3, dinner:'Spaghetti', toast:null, still:false };
+const hub = document.getElementById('hub');
+
+// ───────── shell + Today ─────────
+function shell(){
+  const nav = [['cal','Today',1],['week','Week'],['meals','Meals'],['list','Lists'],['chores','Chores'],['home','Home'],['cam','Cameras']];
+  return `<div class="abs nav">${nav.map(([ic,l,on])=>`<button class="nav-i${on?' on':''}">${I(ic,24)}${l}</button>`).join('')}
+      <div style="flex:1"></div><button class="nav-ph"><img src="https://picsum.photos/seed/homeroom-lake/144/96" alt="">Photos</button></div>
+    <div class="abs hdr"><div><div class="hdr-t">Tuesday, October 27</div><div class="hdr-s">10:42 · 64° rain after 3</div></div>
+      <div style="flex:1"></div>
+      <button style="display:flex;gap:6px;min-height:44px;align-items:center" aria-label="Who's home">${PEOPLE.map(k=>av(k,34,AWAY[k])).join('')}</button>
+      <button class="icn" aria-label="Announcements">${I('bell',20)}<span class="badge">2</span></button>
+      <button class="btn pri press" data-act="add" aria-haspopup="dialog">${I('plus',18)} Add</button></div>`;
+}
+function today(){
+  const ag = EVENTS.map(e=>`<button class="ev${e.past?' past':''}${e.now?' now':''}" data-act="detail" data-arg="${e.id}">
+      <span class="t">${e.now?'Now':e.time.replace(':00 ',' ')}</span><span class="bar" style="background:${P[e.w].c}"></span>
+      <span><div class="ti">${esc(e.t)}</div><div class="sub">${e.kind==='reminder'?'Reminder · ':''}${P[e.w].n}${e.place?' · '+esc(e.place):''}</div></span></button>`).join('');
+  const left = S.chores.filter(c=>!c.done).length;
+  const ch = S.chores.map((c,i)=>`<div class="chore${c.done?' done':''}${c.fresh?' landed':''}" ${c.fresh?'id="fresh"':''}><span class="chk">${c.done?I('check',16,3):''}</span>${av(c.w==='H'?'H':c.w,24)}<span class="tx">${esc(c.t)}</span></div>`).join('');
+  return `<div class="abs content">
+    <div class="card col screen-rise" style="--i:0;gap:8px"><div class="more"><span class="lab">Today</span><button class="go">Week${I('chev',16)}</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">${av('M',24)}School</span><span class="chip">${av('H',24)}Trash day</span></div>
+      <div style="flex:1;overflow:hidden">${ag}</div></div>
+    <div class="col screen-rise" style="--i:1">
+      <div class="card" id="dinnerCard"><div class="more"><span class="lab">Dinner tonight</span><button class="go">Meals${I('chev',16)}</button></div>
+        <div style="font-size:var(--rail-fs-heading);font-weight:600;margin-top:6px" id="dinnerText">${S.dinnerFresh?`<span class="tick">${esc(S.dinner)}</span>`:esc(S.dinner)}</div>
+        <div style="font-size:var(--rail-fs-meta);color:var(--c-mute);margin-top:4px">6:30 PM · Plan lunch ›</div></div>
+      <div class="card col" style="flex:1;gap:2px" id="choresCard"><div class="more"><span class="lab">Chores · ${left} left</span>
+        <button class="go" data-act="add" data-arg="chore" aria-label="Add a chore">${I('plus',16)} Add</button></div><div id="choreList" style="overflow:hidden">${ch}</div></div>
+      <button class="card" style="padding:16px 22px;display:flex;align-items:center;justify-content:space-between" id="listsCard"><span><div class="lab">Lists</div>
+        <div style="font-size:var(--rail-fs-body);margin-top:4px">Groceries <span id="gCount">${S.gFresh?`<span class="tick">${S.groceries}</span>`:S.groceries}</span> · To-do <span id="tCount">${S.tFresh?`<span class="tick">${S.todos}</span>`:S.todos}</span></div></span>${I('chev',18)}</button>
+    </div>
+    <div class="col screen-rise" style="--i:2">
+      <div class="card"><div class="more"><span class="lab">Home</span><button class="go">All${I('chev',16)}</button></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">${[['door','Leaving'],['meals','Dinner'],['film','Movie'],['moon','Goodnight']].map(([i,n])=>`<button class="scene">${I(i,20)}<span>${n}</span></button>`).join('')}</div></div>
+      <div class="card col" style="padding:14px;flex:1;gap:8px"><div class="more" style="padding:0 6px"><span class="lab">Cameras</span><button class="go">All${I('chev',16)}</button></div>
+        <div class="cam" style="flex:1"><img src="https://picsum.photos/seed/homeroom-porch/600/400" alt=""><span class="tag"><i></i>LIVE</span></div></div>
+    </div></div>`;
+}
+
+// ───────── the Add sheet ─────────
+function seg(items, on, act, cls=''){
+  const n = items.length;
+  return `<div class="seg ${cls}" role="tablist" data-seg="${act}"><span class="ind" style="width:calc((100% - 8px) / ${n});transform:translateX(${on*100}%)"></span>
+    ${items.map((l,i)=>`<button role="tab" aria-selected="${i===on}" class="${i===on?'on':''}" data-act="${act}" data-arg="${i}">${l}</button>`).join('')}</div>`;
+}
+function tabLabels(){
+  return TABS.map(([k,l])=> (S.unavailable && k!=='event') ? `${l}<span class="ring" aria-label="unavailable"></span>` : l);
+}
+function pickList(kind){
+  if (S.empty) return `<div class="empty"><div class="h">No quick picks yet</div><p>Picks come from Homeroom's settings and from what the household adds here. Until then, add it from your phone.</p></div>`;
+  const items = PICKS[kind];
+  const pk = t => `<button class="pick" data-act="pick" data-arg="${esc(t)}"><span>${esc(t)}</span><span class="plus">${I('plus',16,2.4)}</span></button>`;
+  const lay = S.variant==='rows' ? 'rows' : S.variant==='chips' ? 'flow' : (kind==='grocery'?'grid3':'grid2');
+  return `<div class="${lay}">${items.map(pk).join('')}</div>`;
+}
+function body(){
+  const k = S.tab;
+  const un = S.unavailable && k!=='event' ? `<div class="note sec" style="margin-top:14px"><span class="ring"></span><span>Family Hub isn't answering · picks as of 6:10. You can still add; if it doesn't go through, you'll get Retry.</span></div>` : '';
+  if (k==='event') return `<div class="sec" style="margin-top:26px">
+      <div style="font-size:var(--rail-fs-heading);font-weight:600;line-height:1.3;letter-spacing:-.01em">Events are added on a phone.</div>
+      <p style="font-size:var(--rail-fs-item);line-height:1.45;color:var(--c-rail-soft);margin:12px 0 0">Add it in Google Calendar and it shows up here within a minute. No typing on the wall.</p></div>
+    <div style="flex:1"></div>
+    <div class="det-act"><button class="btn pri press" data-act="handoff">${I('phone',18)} Send to my phone</button></div>`;
+  let ctl = '';
+  if (k==='chore' || k==='todo') ctl += `<div class="sec"><span class="lab">For</span><div class="ppl">
+      <button class="pp${S.who===null?' on':''}" data-act="who" data-arg=""><span class="any">${I('users',16)}</span>Anyone</button>
+      ${PEOPLE.map(p=>`<button class="pp${S.who===p?' on':''}" data-act="who" data-arg="${p}">${av(p,30)}${P[p].n}</button>`).join('')}</div></div>`;
+  if (k==='chore') ctl += `<div class="sec"><span class="lab">When</span>${seg(DAYS,S.day,'day','sm')}</div>`;
+  if (k==='meal') ctl += `<div class="sec"><span class="lab">Day</span>${seg(MEAL_DAYS,S.mday,'mday','sm')}</div>
+      <div class="sec" style="margin-top:12px">${seg(SLOTS,S.slot,'slot','sm')}</div>
+      ${S.mday===0&&S.slot===2?`<div class="current"><span>Planned</span><b style="flex:1">${esc(S.dinner)}</b><span>A pick replaces it</span></div>`:''}`;
+  return `${un}${ctl}<div class="picks-wrap"><span class="lab">Quick picks</span><div class="picks">${pickList(k)}${S.empty?'':'<div class="foot" style="margin-top:14px">Something else? Add it from your phone.</div>'}</div></div>`;
+}
+function addSheet(){
+  const ti = TABS.findIndex(t=>t[0]===S.tab);
+  return `<button class="scrim" data-act="close" aria-label="Close" tabindex="-1"></button>
+   <div class="sheet" role="dialog" aria-modal="true" aria-label="Add" data-sheet data-rail>
+    <div class="sh-top"><span class="sh-title">Add</span><button class="icn press" data-act="close" aria-label="Close">${I('x',20)}</button></div>
+    ${seg(tabLabels(), ti, 'tab')}
+    <div class="swap" id="sbody" style="display:flex;flex-direction:column;flex:1;min-height:0">${body()}</div>
+   </div>`;
+}
+
+// ───────── event detail ─────────
+function detailSheet(){
+  const e = EVENTS.find(x=>x.id===S.detail); const rem = e.kind==='reminder';
+  return `<button class="scrim" data-act="close" aria-label="Close" tabindex="-1"></button>
+   <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(e.t)}" data-sheet data-rail>
+    <div class="sh-top" style="margin-bottom:12px"><span class="lab">${rem?'Reminder · Family Hub':P[e.w].n+'’s calendar'}</span><button class="icn press" data-act="close" aria-label="Close">${I('x',20)}</button></div>
+    <div class="det-bar" style="background:${P[e.w].c}"></div>
+    <div class="det-title" style="${S.remDone&&rem?'text-decoration:line-through;color:var(--c-mute)':''}">${esc(e.t)}</div>
+    <div class="det-rows">
+      <div class="det-row"><span class="k">${I(rem?'clock':'cal',18)}</span><span><div>${rem?'Today, 9:00 AM':'Today · '+e.time+(e.end?' – '+e.end:'')}</div>${rem?'<div class="s">Due earlier today</div>':''}</span></div>
+      <div class="det-row"><span class="k" style="background:none">${av(e.w,32)}</span><span>${P[e.w].n}</span></div>
+      ${e.place?`<div class="det-row"><span class="k">${I('pin',18)}</span><span>${esc(e.place)}</span></div>`:''}
+    </div>
+    ${!rem&&!e.place?'':''}
+    <div style="flex:1"></div>
+    <div class="det-act">${rem
+      ?`<button class="btn pri press" data-act="remdone">${I('check',18,2.4)} Mark done</button><button class="btn press" data-act="close">Close</button>`
+      :`<button class="btn pri press" data-act="handoff">${I('phone',18)} Send to my phone</button><button class="btn press" data-act="close">Close</button>`}</div>
+   </div>`;
+}
+
+// ───────── toast ─────────
+function toastHTML(t){
+  if (!t) return '';
+  const w = S.sheet ? 'toastwrap with-sheet' : 'toastwrap';
+  if (t.tone==='err') return `<div class="${w}"><div class="toast err" role="alert"><span class="dot"></span><span style="line-height:1.2">${esc(t.text)}<span class="sub">${esc(t.sub||'')}</span></span>
+      <button class="btn pri press" data-act="retry">Retry</button><button class="icn press" data-act="dismiss" aria-label="Dismiss">${I('x',18)}</button></div></div>`;
+  return `<div class="${w}"><div class="toast" role="status"><span class="ok">${t.glyph==='phone'?I('phone',16,2.2):I('check',16,2.6)}</span><span class="txt">${esc(t.text)}</span></div></div>`;
+}
+
+// ───────── render ─────────
+function render(){
+  hub.className = S.still ? 'still' : '';
+  let h = `<div id="base"${S.sheet?' inert':''}>` + shell() + today() + `</div>`;  // sheet open → everything behind it is inert (focus trap)
+  if (S.sheet==='add') h += addSheet();
+  if (S.sheet==='detail') h += detailSheet();
+  h += toastHTML(S.toast);
+  hub.innerHTML = h;
+}
+function swapBody(){
+  const b = document.getElementById('sbody'); if (!b) return;
+  b.innerHTML = body(); // children re-run the swap keyframe
+}
+function moveSeg(name, i){
+  const s = hub.querySelector(`[data-seg="${name}"]`); if (!s) return;
+  s.querySelector('.ind').style.transform = `translateX(${i*100}%)`;
+  s.querySelectorAll('button').forEach((b,j)=>{ b.classList.toggle('on', j===i); b.setAttribute('aria-selected', j===i); });
+}
+let toastTimer;
+function showToast(t, hold){
+  clearTimeout(toastTimer); S.toast = t;
+  const old = hub.querySelector('.toastwrap'); if (old) old.remove();
+  hub.insertAdjacentHTML('beforeend', toastHTML(t));
+  if (t.tone!=='err' && !hold) toastTimer = setTimeout(()=>{ const el = hub.querySelector('.toast'); if(!el) return; el.classList.add('out'); setTimeout(()=>{ S.toast=null; el.parentElement && el.parentElement.remove(); }, 300); }, 2400);
+}
+
+// ───────── the landing: the pick travels to where it lives ─────────
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function copyFor(kind, t){
+  if (kind==='chore') return S.who ? `Chore for ${P[S.who].n}: ${t}` : `Chore added: ${t}`;
+  if (kind==='todo') return S.who ? `To-do for ${P[S.who].n}: ${t}` : `To-do added: ${t}`;
+  if (kind==='grocery') return `Added to Groceries: ${t}`;
+  return `${MEAL_DAYS[S.mday]==='Today'?'Tonight':MEAL_DAYS[S.mday]} ${SLOTS[S.slot].toLowerCase()}: ${t}`.replace('Tonight dinner','Dinner tonight');
+}
+function land(btn){
+  const kind = S.tab, t = btn.dataset.arg, hubR = hub.getBoundingClientRect();
+  if (S.failNext){ return fail(kind, t); }
+  btn.classList.add('pressed');
+  const from = btn.getBoundingClientRect();
+  // 1 · apply the optimistic change under the sheet
+  if (kind==='chore'){ S.chores.forEach(c=>c.fresh=false); S.chores.unshift({t, w:S.who||'H', fresh:true}); }
+  if (kind==='grocery'){ S.groceries++; S.gFresh=true; }
+  if (kind==='todo'){ S.todos++; S.tFresh=true; }
+  if (kind==='meal' && S.mday===0 && S.slot===2){ S.dinner=t; S.dinnerFresh=true; }
+  const sheetHTML = hub.querySelector('.sheet').outerHTML;
+  S.sheet = null; S.still = true; render();       // Today re-rendered without the rise
+  hub.insertAdjacentHTML('beforeend', `<div id="leave" class="leaving-src"><button class="scrim" tabindex="-1"></button>${sheetHTML}</div>`);
+  const leave = document.getElementById('leave');
+  leave.querySelector('.sheet').style.animation='none'; leave.querySelector('.scrim').style.animation='none';
+  const fresh = kind==='chore' ? document.querySelector('#fresh .tx') : kind==='meal' ? document.getElementById('dinnerText') : document.getElementById(kind==='grocery'?'gCount':'tCount');
+  if (kind==='chore') fresh.parentElement.style.opacity = 0;
+  if (kind==='meal' && fresh) fresh.style.opacity = 0;
+  // 2 · ghost lifts off the tile; the sheet lets go
+  const ghost = document.createElement('div'); ghost.className='ghost';
+  ghost.innerHTML = `<span class="bg"></span><span>${esc(t)}</span>`;
+  ghost.style.left = (from.left-hubR.left)+'px'; ghost.style.top=(from.top-hubR.top)+'px'; ghost.style.height=from.height+'px';
+  hub.appendChild(ghost);
+  requestAnimationFrame(()=>{
+    leave.classList.add('leaving');
+    if (!fresh || reduced){ finish(); return; }
+    const to = fresh.getBoundingClientRect(), gR = ghost.getBoundingClientRect();
+    const dx = (to.left - 16) - gR.left + (kind==='chore'||kind==='meal'?0:-8), dy = (to.top + to.height/2) - (gR.top + gR.height/2);
+    ghost.style.transform = `translate(${dx}px,${dy}px)` + (kind==='grocery'||kind==='todo' ? ' scale(.6)' : '');
+    ghost.querySelector('.bg').style.opacity = 0;
+    setTimeout(finish, 560);
+  });
+  function finish(){
+    if (kind==='chore'){ fresh.parentElement.style.opacity=''; fresh.parentElement.classList.add('landed'); }
+    if (kind==='meal' && fresh){ fresh.style.opacity=''; fresh.innerHTML = `<span class="tick">${esc(t)}</span>`; }
+    if (kind==='grocery' || kind==='todo'){ fresh.innerHTML = `<span class="tick">${kind==='grocery'?S.groceries:S.todos}</span>`; }
+    ghost.style.transition='opacity 160ms var(--ease-out)'; ghost.style.opacity=0;
+    setTimeout(()=>{ ghost.remove(); leave.remove(); }, 300);
+    showToast({tone:'ok', text: copyFor(kind, t)});
+    history.replaceState(null,'','#landed');
+  }
+}
+function fail(kind, t){
+  S.sheet=null; S.still=true; render();
+  showToast({tone:'err', text:`Couldn't add ${t}.`, sub:'Family Hub didn’t answer.'});
+}
+
+// ───────── events ─────────
+hub.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, g = b.dataset.arg;
+  switch(a){
+    case 'add': Object.assign(S,{sheet:'add', tab:g||'chore', still:false, toast:null}); render(); hub.querySelector('.sheet [data-act="tab"].on')?.focus({preventScroll:true}); break;
+    case 'close': { const sh = hub.querySelector('.sheet'), sc = hub.querySelector('.scrim'); if(!sh) break;
+      sh.parentElement.classList.add('leaving'); setTimeout(()=>{ S.sheet=null; S.still=true; render(); history.replaceState(null,'','#today'); }, 280); break; }
+    case 'tab': S.tab = TABS[+g][0]; moveSeg('tab', +g); swapBody(); break;
+    case 'who': S.who = g||null; hub.querySelectorAll('.pp').forEach(x=>x.classList.toggle('on', (x.dataset.arg||null)===S.who)); break;
+    case 'day': S.day=+g; moveSeg('day', +g); break;
+    case 'mday': S.mday=+g; moveSeg('mday', +g); swapBody(); break;
+    case 'slot': S.slot=+g; moveSeg('slot', +g); swapBody(); break;
+    case 'pick': land(b); break;
+    case 'detail': Object.assign(S,{sheet:'detail', detail:g, still:false, remDone:false}); render(); break;
+    case 'remdone': S.remDone=true; { const sh=hub.querySelector('.sheet'); sh.parentElement.classList.add('leaving');
+      setTimeout(()=>{ S.sheet=null; S.still=true; render(); showToast({tone:'ok', text:'Done. Nice.'}); }, 280); } break;
+    case 'handoff': showToast({tone:'ok', text:'Coming soon: scan to add on your phone', glyph:'phone'}); break;
+    case 'retry': S.failNext=false; showToast({tone:'ok', text:'Added to Groceries: Bananas'}); S.groceries++; render(); showToast({tone:'ok', text:'Added to Groceries: Bananas'}); break;
+    case 'dismiss': { const el = hub.querySelector('.toast'); el.classList.add('out'); setTimeout(()=>{ S.toast=null; el.parentElement.remove(); },300); } break;
+  }
+});
+hub.addEventListener('keydown', e=>{ if (e.key==='Escape' && S.sheet) hub.querySelector('.sheet [data-act="close"]').click(); });
+
+// ───────── states behind hashes ─────────
+const STATES = {
+  'today':        ()=>({}),
+  'add-chore':    ()=>({sheet:'add', tab:'chore', who:'T', day:0}),
+  'add-chore-rows':  ()=>({sheet:'add', tab:'chore', who:'T', variant:'rows'}),
+  'add-chore-chips': ()=>({sheet:'add', tab:'chore', who:'T', variant:'chips'}),
+  'add-grocery':  ()=>({sheet:'add', tab:'grocery'}),
+  'add-todo':     ()=>({sheet:'add', tab:'todo', who:null}),
+  'add-meal':     ()=>({sheet:'add', tab:'meal', mday:0, slot:2}),
+  'add-event':    ()=>({sheet:'add', tab:'event'}),
+  'unavailable':  ()=>({sheet:'add', tab:'grocery', unavailable:true, failNext:true}),
+  'empty':        ()=>({sheet:'add', tab:'todo', empty:true}),
+  'event':        ()=>({sheet:'detail', detail:'e2'}),
+  'reminder':     ()=>({sheet:'detail', detail:'r1'}),
+  'handoff':      ()=>({sheet:'detail', detail:'e2', still:true, toast:{tone:'ok', text:'Coming soon: scan to add on your phone', glyph:'phone'}}),
+  'landed':       ()=>({still:true, chores:[{t:'Water the plants',w:'T',fresh:true}].concat(BASE_CHORES), toast:{tone:'ok', text:'Chore for Theo: Water the plants'}}),
+  'failed':       ()=>({still:true, toast:{tone:'err', text:'Couldn’t add Bananas.', sub:'Family Hub didn’t answer.'}}),
+};
+function fromHash(){
+  const k = (location.hash||'#today').slice(1);
+  const base = { sheet:null, tab:'chore', who:null, day:0, mday:0, slot:2, variant:'tiles', unavailable:false, empty:false, detail:null,
+    chores:BASE_CHORES.map(c=>({...c})), groceries:6, todos:3, dinner:'Spaghetti', toast:null, still:false, failNext:false, gFresh:false, tFresh:false, dinnerFresh:false };
+  Object.assign(S, base, (STATES[k]||STATES.today)());
+  clearTimeout(toastTimer); render();
+}
+addEventListener('hashchange', fromHash); fromHash();
+</script>
+</body>
+</html>

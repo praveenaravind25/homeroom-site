@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, height=841, initial-scale=1">
+<title>Homeroom · Refined states: Ambient → Glance → Active, plus Night (issue #14)</title>
+<!-- Review mockup only. Production self-hosts Schibsted Grotesk (local-first, I-18). Placeholder photos: picsum. Generic content, no household data. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..700;1,400..600&display=block" rel="stylesheet">
+<style>
+/* ===== Homeroom tokens v0.2 · B "Full Bleed": verbatim from app/src/styles/tokens.css ===== */
+:root{
+  --c-chalk:#F7F4EE; --c-soft:#E0DACE; --c-brass:#EDC67C; --c-scrim:10 9 8;
+  --c-hairline:rgb(247 244 238 / .16); --c-night:#6F604E; --c-ground:#0A0908;
+  --scrim-min:.72; --scrim-active:.8; --o-past:.7;
+  --font:"Schibsted Grotesk", system-ui, Roboto, sans-serif;
+  --fs-clock:216px; --fs-clock-small:120px; --fs-glance:52px; --fs-title:40px; --fs-body:28px;
+  --fs-detail:26px; --fs-caption:24px; --fs-label:22px;
+  --tracking-clock:-.055em; --tracking-label:.16em;
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-5:44px; --sp-edge:56px;
+  --r-focus:10px; --r-dot:999px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1);
+  --ease-out:cubic-bezier(.4,0,.2,1); --ease-drift:cubic-bezier(.37,0,.63,1);
+  --dur-settle:1400ms; --dur-settle-fade:1100ms; --dur-mode:760ms; --dur-exit:420ms;
+  --dur-press:180ms; --dur-night:1600ms; --stagger:55ms; --stagger-lead:180ms;
+  --recede-scale:1.06; --rise-from:translateY(14px); --exit-to:translateY(10px); --press-scale:.97;
+  --drift-cycle:240s;
+  --focus-ring:0 0 0 3px var(--c-ground), 0 0 0 6px var(--c-brass);
+  --hub-w:1263px; --hub-h:841px;
+  /* Night uses --c-night ONLY (3.28:1 on ground, AA-large). A dimmer second tone was tried at 2.62:1 and rejected: quiet comes from size. */
+  --caption-beat:700ms; /* already a constant in Overlay.svelte (CAPTION_BEAT_MS) */
+}
+@media (prefers-reduced-motion: reduce){
+  :root{ --recede-scale:1; --rise-from:none; --exit-to:none; --press-scale:1;
+    --dur-settle:0ms; --dur-settle-fade:320ms; --dur-mode:320ms; --dur-exit:320ms; --dur-night:320ms;
+    --stagger:0ms; --stagger-lead:0ms; }
+  .photo img{ animation:none !important; }
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--font);
+  -webkit-font-smoothing:antialiased;user-select:none;color:var(--c-chalk)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus{outline:none}
+:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--r-focus)}
+
+.hub{position:relative;width:var(--hub-w);height:var(--hub-h);overflow:hidden;background:var(--c-ground);cursor:pointer}
+.drift{position:absolute;inset:0;animation:burnin-drift var(--drift-cycle) steps(1,end) infinite}
+@keyframes burnin-drift{0%{transform:translate(0,0)}12.5%{transform:translate(6px,-4px)}25%{transform:translate(12px,-8px)}
+  37.5%{transform:translate(6px,-12px)}50%{transform:translate(-4px,-6px)}62.5%{transform:translate(-10px,2px)}
+  75%{transform:translate(-6px,8px)}87.5%{transform:translate(2px,4px)}100%{transform:translate(0,0)}}
+
+/* ---------- Photo: unchanged from #5 (hero layout + drift) ---------- */
+.photo{position:absolute;inset:0;transition:transform var(--dur-mode) var(--ease-settle),opacity var(--dur-night) var(--ease-out)}
+.photo img{position:absolute;inset:-3%;width:106%;height:106%;object-fit:cover;
+  animation:kb 64s var(--ease-drift) infinite alternate}
+@keyframes kb{from{transform:scale(1) translate(0,0)}to{transform:scale(1.04) translate(-1%,-.6%)}}
+.dim{position:absolute;inset:0;background:rgb(var(--c-scrim) / var(--scrim-active));opacity:0;
+  transition:opacity var(--dur-exit) var(--ease-out)}
+
+/* ---------- Scrims: the ambient vignette is always on; Glance ADDS pools (opacity only) ---------- */
+.scrim{position:absolute;inset:0;pointer-events:none}
+.scrim.gl{opacity:0;transition:opacity var(--dur-exit) var(--ease-out)}
+
+/* ---------- Overlay ---------- */
+.overlay{position:absolute;inset:0;pointer-events:none;transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle)}
+.left{position:absolute;left:var(--sp-edge);bottom:48px;display:flex;flex-direction:column;align-items:flex-start}
+.right{position:absolute;right:var(--sp-edge);bottom:52px;width:520px;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.eyebrow{font-size:var(--fs-label);font-weight:500;line-height:1;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.clock{font-size:var(--fs-clock);font-weight:500;line-height:.8;letter-spacing:var(--tracking-clock);margin:22px 0 0 -10px;white-space:nowrap}
+.period{font-size:calc(var(--fs-clock) / 6);letter-spacing:.02em;margin-left:var(--sp-2);color:var(--c-soft)}
+
+/* The photo's voice (right corner): Yearbook caption + where & when. Ambient's ONLY non-clock words. */
+.credit{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:flex-end;
+  transition:opacity var(--dur-exit) var(--ease-out) var(--caption-beat),transform var(--dur-exit) var(--ease-out) var(--caption-beat)}
+.caption{display:flex;align-items:center;gap:12px;font-size:var(--fs-caption);font-style:italic;line-height:1;color:var(--c-soft);margin-bottom:14px}
+.caption::before{content:'';width:28px;height:1px;background:currentColor;opacity:.7}
+.where{font-size:var(--fs-label);font-weight:500;line-height:1;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+
+/* Glance pieces: hidden in Ambient, rise in a stagger, leave together */
+.g{opacity:0;transform:var(--rise-from);transition:opacity var(--dur-exit) var(--ease-out),transform var(--dur-exit) var(--ease-out)}
+.wx{display:flex;align-items:baseline;gap:14px;margin-bottom:28px;height:52px}
+.wx b{font-size:var(--fs-glance);font-weight:500;letter-spacing:-.03em;line-height:1}
+.wx span{font-size:var(--fs-detail);color:var(--c-soft)}
+.wx-wrap{height:0;overflow:visible;display:flex;align-items:flex-end;transform-origin:left bottom}
+.wx-wrap .wx{margin-bottom:28px}
+.day{position:absolute;right:0;bottom:0;width:520px;display:flex;flex-direction:column;align-items:flex-end}
+.label{font-size:var(--fs-label);font-weight:600;line-height:1;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-brass);display:flex;align-items:center;gap:12px}
+.label .dot{width:10px;height:10px;border-radius:var(--r-dot);background:var(--c-brass);opacity:0;transform:scale(0)}
+.next{font-size:var(--fs-glance);font-weight:500;line-height:1.02;letter-spacing:-.02em;margin-top:14px}
+.place{font-size:var(--fs-detail);line-height:1.3;color:var(--c-soft);margin-top:10px}
+.later{margin-top:22px;padding-top:18px;border-top:1px solid var(--c-hairline);width:440px;display:flex;flex-direction:column;gap:12px}
+.lrow{display:flex;justify-content:flex-end;align-items:baseline;gap:18px;white-space:nowrap}
+.lrow .t{font-size:var(--fs-detail);color:var(--c-soft)}
+.lrow .w{font-size:var(--fs-body);font-weight:500;letter-spacing:-.005em}
+
+/* ===== MODE: GLANCE ===== the photo stays; the day rises into the corners */
+.hub[data-mode="glance"] .scrim.gl{opacity:1;transition:opacity var(--dur-mode) var(--ease-settle)}
+.hub[data-mode="glance"] .credit{opacity:0;transform:var(--exit-to);transition-delay:0ms}
+.hub[data-mode="glance"] .g{opacity:1;transform:none;transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle);
+  transition-delay:calc(var(--i,0) * var(--stagger) + var(--stagger-lead))}
+.hub[data-mode="glance"] .label .dot{opacity:1;transform:none;
+  transition:opacity var(--dur-exit) var(--ease-out) calc(var(--dur-mode) + 120ms),transform var(--dur-exit) var(--ease-press) calc(var(--dur-mode) + 120ms)}
+
+/* ===== MODE: ACTIVE (Today, unchanged from #4/#3) ===== */
+.hub[data-mode="active"] .photo{transform:scale(var(--recede-scale))}
+.hub[data-mode="active"] .dim{opacity:1;transition:opacity var(--dur-mode) var(--ease-settle)}
+.hub[data-mode="active"] .overlay{opacity:0;transform:var(--exit-to);transition-duration:var(--dur-exit)}
+.today{position:absolute;inset:0;pointer-events:none}
+.today .rise{opacity:0;transform:var(--rise-from);transition:opacity var(--dur-exit) var(--ease-out),transform var(--dur-exit) var(--ease-out)}
+.hub[data-mode="active"] .today{pointer-events:auto}
+.hub[data-mode="active"] .today .rise{opacity:1;transform:none;transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle);
+  transition-delay:calc(var(--i,0) * var(--stagger) + var(--stagger-lead))}
+.thead{position:absolute;left:var(--sp-edge);top:52px;right:var(--sp-edge);display:flex;align-items:baseline;gap:var(--sp-3)}
+.bell{font-size:var(--fs-label);font-weight:600;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-brass)}
+.bell i{display:inline-block;width:10px;height:10px;border-radius:var(--r-dot);background:var(--c-brass);margin-right:12px;vertical-align:2px}
+.tdate{font-size:var(--fs-body);color:var(--c-soft)}
+.sched{position:absolute;left:var(--sp-edge);top:120px;width:690px;list-style:none}
+.row{display:grid;grid-template-columns:160px 1fr;padding:20px 0;border-top:1px solid var(--c-hairline)}
+.row .tm{position:relative;font-size:var(--fs-body);font-weight:500;line-height:1.25;color:var(--c-soft);white-space:nowrap}
+.row .wh{font-size:var(--fs-title);font-weight:500;line-height:1.08;letter-spacing:-.012em}
+.row .wh small{display:block;font-size:var(--fs-detail);font-weight:400;line-height:1.3;color:var(--c-soft);margin-top:6px;letter-spacing:0}
+.row.past>*{opacity:var(--o-past)}
+.row.live .tm{color:var(--c-brass)}
+.row.live .tm::before{content:'';position:absolute;left:-26px;top:13px;width:10px;height:10px;border-radius:var(--r-dot);background:var(--c-brass)}
+.side{position:absolute;left:812px;top:120px;width:395px}
+.sec{padding:20px 0 28px;border-top:1px solid var(--c-hairline)}
+.sec .l{font-size:var(--fs-label);font-weight:500;line-height:1;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.sec .mid{font-size:var(--fs-title);font-weight:500;line-height:1.08;margin-top:var(--sp-2)}
+.sec .big{font-size:var(--fs-glance);font-weight:500;line-height:1;letter-spacing:-.03em;margin-top:var(--sp-2)}
+.sec .big span{font-size:var(--fs-detail);font-weight:400;letter-spacing:0;color:var(--c-soft);margin-left:14px}
+.sec .sub{font-size:var(--fs-detail);color:var(--c-soft);margin-top:10px}
+.back{position:absolute;right:var(--sp-edge);bottom:44px;font-size:var(--fs-body);font-weight:500;color:var(--c-soft);padding:14px 22px;
+  transition:transform var(--dur-press) var(--ease-press),opacity var(--dur-press) var(--ease-out)}
+.back:active{transform:scale(var(--press-scale));opacity:.85}
+
+/* ===== MODE: NIGHT ===== no photo; the clock stays exactly where it lives, only the light changes */
+.night{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity var(--dur-exit) var(--ease-out)}
+.nleft{position:absolute;left:var(--sp-edge);bottom:48px;display:flex;flex-direction:column;align-items:flex-start}
+.nline{font-size:var(--fs-detail);font-weight:500;line-height:1;color:var(--c-night)}
+.nline b{font-weight:500;color:var(--c-night)}
+.nclock{font-size:var(--fs-clock);font-weight:500;line-height:.8;letter-spacing:var(--tracking-clock);margin:22px 0 0 -10px;white-space:nowrap;color:var(--c-night)}
+.nclock .period{color:var(--c-night)}
+.nwx{position:absolute;right:var(--sp-edge);bottom:52px;font-size:var(--fs-detail);font-weight:500;color:var(--c-night);text-align:right}
+.nwx b{font-weight:500;color:var(--c-night)}
+.hub[data-mode="night"] .photo{opacity:0}
+.hub[data-mode="night"] .scrim,.hub[data-mode="night"] .overlay{opacity:0;transition:opacity var(--dur-night) var(--ease-out)}
+.hub[data-mode="night"] .night{opacity:1;transition:opacity var(--dur-night) var(--ease-out) 600ms}
+/* Night wake (tap): Today on ground: no photo, no light blast at 2 a.m. */
+.hub.on-ground .photo,.hub.on-ground .dim{opacity:0 !important;transition:none}
+.hub.on-ground .photo img{visibility:hidden} /* mockup: Chromium kept a ghost of the animated layer */
+.hub.on-ground .row.live .tm{color:var(--c-soft)}
+.hub.on-ground .row.live .tm::before{display:none}
+.hub.on-ground .row>*{opacity:var(--o-past)}
+
+/* ---------- Mockup-only HUD (H) ---------- */
+.hud{position:fixed;left:12px;top:12px;z-index:50;font:500 13px/1.4 system-ui,sans-serif;color:#eee;background:rgb(0 0 0 / .78);
+  padding:10px 12px;border-radius:8px;display:none;min-width:290px}
+.hud.on{display:block}
+.hud b{color:var(--c-brass)}
+.hud .bar{height:4px;background:#333;margin:6px 0 8px;border-radius:2px;overflow:hidden}
+.hud .bar i{display:block;height:100%;width:0;background:var(--c-brass)}
+.hud .keys{color:#aaa;margin-top:6px}
+.hud button{font:inherit;padding:3px 7px;margin:4px 4px 0 0;background:#333;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="hub" id="hub" data-mode="ambient" role="application" aria-label="Homeroom wall">
+  <div class="photo"><img id="ph" alt="" src="https://picsum.photos/id/1015/1340/892"></div>
+  <div class="dim"></div>
+  <div class="scrim amb" id="scrimAmb"></div>
+  <div class="scrim gl" id="scrimGl"></div>
+
+  <div class="overlay" data-overlay>
+    <div class="drift">
+      <div class="left">
+        <div class="wx-wrap"><p class="wx g" style="--i:0" data-weather><b>58°</b><span>Partly cloudy</span></p></div>
+        <p class="eyebrow" data-date>Thursday, October 29</p>
+        <p class="clock" data-clock><span id="ct">3:48</span><span class="period" id="cp">PM</span></p>
+      </div>
+      <div class="right">
+        <div class="credit" data-photo-details>
+          <p class="caption" id="cap">Three years ago this week</p>
+          <p class="where" id="where">Lysefjord · August 2023</p>
+        </div>
+        <div class="day">
+          <p class="label g" style="--i:1"><span class="dot"></span>Next</p>
+          <p class="next g" style="--i:2" data-next>Swim club pickup</p>
+          <p class="place g" style="--i:2">4:15 PM · Community pool</p>
+          <div class="later g" style="--i:3">
+            <p class="lrow"><span class="w">Piano lesson</span><span class="t">5:30 PM</span></p>
+            <p class="lrow"><span class="w">Dinner with the neighbours</span><span class="t">7:00 PM</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="today" aria-label="Today" data-today>
+    <header class="thead rise" style="--i:0"><p class="bell"><i></i>Today</p><p class="tdate" id="tdate">Thursday, October 29 · 3:48 PM</p></header>
+    <ol class="sched">
+      <li class="row rise past" style="--i:1"><span class="tm">8:10 AM</span><span class="wh">School drop-off</span></li>
+      <li class="row rise past" style="--i:2"><span class="tm">12:30 PM</span><span class="wh">Dentist<small>Main Street Dental</small></span></li>
+      <li class="row rise live" style="--i:3"><span class="tm">4:15 PM</span><span class="wh">Swim club pickup<small>Community pool</small></span></li>
+      <li class="row rise" style="--i:4"><span class="tm">5:30 PM</span><span class="wh">Piano lesson</span></li>
+      <li class="row rise" style="--i:5"><span class="tm">7:00 PM</span><span class="wh">Dinner with the neighbours</span></li>
+    </ol>
+    <aside class="side rise" style="--i:2">
+      <div class="sec"><p class="l">Dinner</p><p class="mid">Lentil soup &amp; flatbread</p></div>
+      <div class="sec"><p class="l">Weather</p><p class="big">58°<span>Partly cloudy</span></p><p class="sub">High 63° · Low 47°</p></div>
+    </aside>
+    <button class="back rise" style="--i:3" id="back">Back to photos</button>
+  </section>
+
+  <div class="night" aria-hidden="true" data-night>
+    <div class="drift">
+      <div class="nleft">
+        <p class="nline">Tomorrow <b>7:40 AM</b> · School drop-off</p>
+        <p class="nclock"><span>11:48</span><span class="period">PM</span></p>
+      </div>
+      <p class="nwx"><b>46°</b> Clear</p>
+    </div>
+  </div>
+</div>
+
+<div class="hud" id="hud" aria-live="polite">
+  <div>mode <b id="hm">ambient</b> · <span id="hr">boot</span></div>
+  <div class="bar"><i id="hb"></i></div>
+  <div id="hs">presence: off</div>
+  <div>
+    <button data-k="p">P presence</button><button data-k="w">W walk-by</button><button data-k="d">D dark</button>
+    <button data-k="f">F speed ×1</button>
+  </div>
+  <div class="keys">tap = touch · Esc = dismiss · H = hide<br>#ambient #glance #active #night #night-wake #date-only</div>
+</div>
+
+<script>
+/* ---- Scrim: the same maths as app/src/styles/scrim.ts, geometry from tokens.json ---- */
+const POOL_STOPS=[[0,.76],[.74,.71],[.83,.5],[.92,.2],[1,0]];
+const GEO={
+  // Ambient (PROPOSED change): right pool shrinks to the photo credit; left pool unchanged.
+  ambient:{base:[[0,.2],[260,.16],[460,0]],pools:[{at:'left',rx:760,ry:620},{at:'right',rx:600,ry:330}]},
+  // Glance (NEW): extra pools layered over ambient (opacity-only fade). Composite α = 1-(1-a)(1-b).
+  glance:{base:[],pools:[{at:'left',rx:640,ry:520},{at:'right',rx:880,ry:640}]},
+};
+const rgb=a=>`rgb(10 9 8 / ${a})`;
+function scrimCSS(l){
+  const p=l.pools.map(p=>`radial-gradient(ellipse ${p.rx}px ${p.ry}px at ${p.at} bottom, ${POOL_STOPS.map(([o,a])=>`${rgb(a)} ${o*100}%`).join(', ')})`);
+  if(l.base.length)p.push(`linear-gradient(to top, ${l.base.map(([px,a])=>`${rgb(a)} ${px}px`).join(', ')})`);
+  return p.join(', ');
+}
+function lerp(st,v){if(!st.length)return 0;if(v<=st[0][0])return st[0][1];const L=st[st.length-1];if(v>=L[0])return L[1];
+  for(let i=1;i<st.length;i++){const[o0,a0]=st[i-1],[o1,a1]=st[i];if(v<=o1)return a0+(a1-a0)*((v-o0)/(o1-o0));}return 0}
+function alphaAt(l,x,y,w=1263,h=841){let keep=1-lerp(l.base,h-y);for(const p of l.pools){const cx=p.at==='left'?0:w;
+  const d=Math.hypot((x-cx)/p.rx,(y-h)/p.ry);keep*=1-(d>=1?0:lerp(POOL_STOPS,d));}return 1-keep}
+window.__proof=(mode)=>{ // min composite α under every visible glyph box (5×3 grid), like e2e/legibility
+  const layers=mode==='glance'?[GEO.ambient,GEO.glance]:[GEO.ambient];
+  const sel=mode==='glance'?'.overlay .eyebrow,.overlay .clock,.overlay .g':'.overlay .eyebrow,.overlay .clock,.credit p';
+  const hub=document.getElementById('hub').getBoundingClientRect();
+  return [...document.querySelectorAll(sel)].map(el=>{const r=el.getBoundingClientRect();let min=1;
+    for(let i=0;i<5;i++)for(let j=0;j<3;j++){const x=r.left-hub.left+r.width*(i/4),y=r.top-hub.top+r.height*(j/2);
+      const a=1-layers.reduce((k,l)=>k*(1-alphaAt(l,x,y)),1);min=Math.min(min,a)}
+    return [el.className+' "'+el.textContent.trim().slice(0,24)+'"',+min.toFixed(3)]});
+};
+document.getElementById('scrimAmb').style.background=scrimCSS(GEO.ambient);
+document.getElementById('scrimGl').style.background=scrimCSS(GEO.glance);
+
+/* ---- A tiny model of the architect's mode machine (C1), mockup-grade ---- */
+const hub=document.getElementById('hub');
+let speed=1;
+const CFG={glanceSustainMs:8000,glanceGraceMs:30000,idleTimeoutMs:300000,nightWakeIdleMs:60000,quietMs:10000};
+const S={mode:'ambient',reason:'boot',present:false,lastSignal:null,sustainFrom:null,absentSince:null,dark:false,lastTouch:0,signalOn:false,quietTimer:null};
+function set(mode,reason){
+  if(S.mode===mode)return; S.mode=mode;S.reason=reason;hub.dataset.mode=mode;
+  hub.classList.toggle('on-ground',mode==='active'&&S.dark);
+  console.log(`mode → ${mode} (${reason})`);
+}
+const rest=()=>S.dark?'night':'ambient';
+const now=()=>performance.now()*speed;
+function signal(on){ // raw evidence (motion pulses / face polls); debounced presence edge trails by quietMs
+  S.signalOn=on;
+  if(on){ if(!S.present){S.present=true;S.sustainFrom=Math.max(now(),S.sustainFrom??0);} S.absentSince=null; clearTimeout(S.quietTimer); }
+  else { S.quietTimer=setTimeout(()=>{S.present=false;S.absentSince=now();S.sustainFrom=null;},CFG.quietMs/speed); }
+}
+function touch(){ S.lastTouch=now(); if(S.mode!=='active')set('active','touch'); }
+function dismiss(){ if(S.mode==='active'){set(rest(),'dismiss');S.sustainFrom=now();} }
+setInterval(()=>{
+  const t=now(); if(S.signalOn)S.lastSignal=t;
+  if(S.mode==='ambient'&&S.present&&S.lastSignal!=null&&S.lastSignal-S.sustainFrom>=CFG.glanceSustainMs)set('glance','presence-sustained');
+  if(S.mode==='glance'&&!S.present&&S.absentSince!=null&&t-S.absentSince>=CFG.glanceGraceMs)set(rest(),'presence-grace-ended');
+  if(S.mode==='active'&&!S.present&&t-S.lastTouch>=(S.dark?CFG.nightWakeIdleMs:CFG.idleTimeoutMs)){set(rest(),'idle');S.sustainFrom=t;}
+  hud();
+},200);
+function setDark(d){S.dark=d; if(d&&(S.mode==='ambient'||S.mode==='glance'))set('night','dark'); if(!d&&S.mode==='night')set('ambient','bright'); hub.classList.toggle('on-ground',S.mode==='active'&&S.dark);}
+
+/* ---- HUD ---- */
+const $=id=>document.getElementById(id);
+function hud(){$('hm').textContent=S.mode;$('hr').textContent=S.reason;
+  let p=0,txt='presence: off';
+  if(S.present&&S.mode==='ambient'&&S.sustainFrom!=null&&S.lastSignal!=null){const s=Math.max(0,S.lastSignal-S.sustainFrom);p=Math.min(1,s/CFG.glanceSustainMs);txt=`sustain ${(s/1000).toFixed(1)} / ${CFG.glanceSustainMs/1000}s (raw signal)`;}
+  else if(S.present&&!S.signalOn)txt='signal gone · quiet tail (10s) before presence ends';
+  else if(S.present)txt='present';
+  else if(S.mode==='glance'&&S.absentSince!=null){const g=now()-S.absentSince;p=1-g/CFG.glanceGraceMs;txt=`grace ${((CFG.glanceGraceMs-g)/1000).toFixed(0)}s left`;}
+  if(S.dark)txt+=' · dark latched';
+  $('hs').textContent=txt;$('hb').style.width=(p*100)+'%';}
+const keys={p(){signal(!S.signalOn)},w(){signal(true);setTimeout(()=>signal(false),2500/speed)},d(){setDark(!S.dark)},
+  f(){speed=speed===1?4:1;document.querySelector('[data-k=f]').textContent=`F speed ×${speed}`},h(){$('hud').classList.toggle('on')}};
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='escape')dismiss();else if(keys[k])keys[k]();});
+$('hud').addEventListener('click',e=>{e.stopPropagation();const k=e.target.dataset.k;if(k)keys[k]();});
+hub.addEventListener('click',e=>{if(e.target.closest('#back')){dismiss();return;}touch();});
+
+/* ---- Hash states (for review + screenshots) ---- */
+function fromHash(){
+  const h=location.hash.slice(1)||'ambient';
+  document.documentElement.style.setProperty('--hold','0');
+  $('where').textContent='Lysefjord · August 2023';$('cap').style.display='';
+  S.dark=false;hub.classList.remove('on-ground');
+  if(h==='date-only'){$('where').textContent='August 2023';set('ambient','boot');S.mode='ambient';hub.dataset.mode='ambient';return;}
+  if(h==='night-wake'){S.dark=true;S.mode='';set('active','touch');hub.classList.add('on-ground');
+    $('tdate').textContent='Thursday, October 29 · 11:48 PM';return;}
+  $('tdate').textContent='Thursday, October 29 · 3:48 PM';
+  if(h==='night'){S.dark=true;}
+  S.mode='';set(['ambient','glance','active','night'].includes(h)?h:'ambient','hash');
+}
+addEventListener('hashchange',fromHash);fromHash();
+if(new URLSearchParams(location.search).has('hud'))$('hud').classList.add('on');
+</script>
+</body>
+</html>
