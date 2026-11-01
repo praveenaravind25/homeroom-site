@@ -17,6 +17,8 @@ Runs on every PR (`.github/workflows/check-site.yml`) and must pass. It scans ev
 
 Matched values are always masked in the output. `npm test` is the self-test: one seeded fake input per rule, then the real tree.
 
+The same run checks search indexing against `"public"` in `site.config.json`. Hidden means noindex on every page and `robots.txt` `Disallow: /`. Public means `/mockups/` stays disallowed and the 404 keeps noindex. A missing file counts as hidden. Going live checklist: `docs/go-live.md`.
+
 If a generic word from the real config trips the check (a list name, a room), add it to `vocabulary` in the allowlist. Never add a person, place, address, device or id.
 
 ## Screenshots (`npm run shots`)
