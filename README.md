@@ -8,7 +8,7 @@ The public showcase for **Homeroom**, a wall tablet that's a photo frame first a
 
 ## Privacy check (`npm run check:site`)
 
-Runs on every PR (`.github/workflows/check-site.yml`) and must pass. It scans every tracked file and everything in `public/`, including PNG/JPEG metadata and file names, and fails with `file:line rule masked-value` on:
+Runs on every PR (`.github/workflows/check-site.yml`) and must pass. It scans every tracked file (and untracked, non-ignored files, so a local run sees new files before CI does) and everything in `public/`, including PNG/JPEG metadata and file names, and fails with `file:line rule masked-value` on:
 
 - an email address;
 - a private or loopback IP (10.x, 172.16–31.x, 192.168.x, 127.x);

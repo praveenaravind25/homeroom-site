@@ -253,7 +253,8 @@ export function scanFile(abs, rel, ctx) {
 export function listFiles(root) {
   const files = new Set();
   try {
-    const out = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    // Tracked, plus untracked-but-not-ignored: a local run sees a new file before CI does.
+    const out = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     for (const f of out.split('\0')) if (f) files.add(f.split('/').join(sep));
   } catch {
     // Not a git checkout (a tarball, a temp dir): fall back to walking everything.
@@ -276,7 +277,9 @@ function walk(dir, root) {
 export function loadAllowlist(path = join(ROOT, 'scripts', 'check-site.allowlist.json')) {
   const { entities, vocabulary } = JSON.parse(readFileSync(path, 'utf8'));
   if (!Array.isArray(entities) || !Array.isArray(vocabulary)) throw new Error('check-site: the allowlist needs "entities" and "vocabulary" arrays');
-  return { entities: new Set(entities), vocabulary: new Set(vocabulary) };
+  // A fixture entity id is public sample data, so it's never a deny-list term either: the real
+  // config shares integration defaults like the Family Hub lists' stock `todo.*` ids.
+  return { entities: new Set(entities), vocabulary: new Set([...vocabulary, ...entities]) };
 }
 
 export function scanTree(root, ctx) {

@@ -90,8 +90,7 @@ function writeConfig(dataDir) {
   const cfg = {
     ...example,
     env: 'development',
-    host: '127.0.0.1',
-    port: PORT,
+    port: PORT, // host stays the example's loopback; proveFake() checks it
     dataDir,
     sources: Object.fromEntries(SOURCES.map((s) => [s, 'fake'])),
   };
@@ -116,9 +115,16 @@ function proveFake(configPath, env) {
   if (real.length) die(`the loaded config has a non-fake source (${real.map(([k]) => k).join(', ')})`);
   const strangers = got.members.filter((m) => !SAMPLE_HOUSEHOLD.includes(m));
   if (strangers.length) die('the loaded config has a member outside the sample household');
+  // Loopback only: the sample build is never served to the LAN.
+  const loopback = got.host === 'localhost' || got.host === '::1' || got.host.split('.')[0] === '127';
+  if (!loopback) die('the loaded config binds a non-loopback host');
+  origin = `http://${got.host.includes(':') ? `[${got.host}]` : got.host}:${got.port}`;
   log(`config verified: every source fake; household ${got.members.join(', ')}`);
   return got;
 }
+
+/** Where the sample build is served, from the loaded config (set by proveFake). */
+let origin = '';
 
 // ---------------------------------------------------------------- 3. serve
 
@@ -137,7 +143,7 @@ async function serve(env) {
   for (;;) {
     if (Date.now() > deadline) throw new Error('server did not come up in 30 s');
     const up = await Promise.race([
-      fetch(`http://127.0.0.1:${PORT}/api/v1/health`).then((r) => r.ok, () => false),
+      fetch(`${origin}/api/v1/health`).then((r) => r.ok, () => false),
       exited,
     ]);
     if (up) break;
@@ -260,7 +266,7 @@ async function capture(chromium, names, fresh) {
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       try {
-        await page.goto(`http://127.0.0.1:${PORT}/?test&interval=3600&poll=3600${FAST_LADDER}`);
+        await page.goto(`${origin}/?test&interval=3600&poll=3600${FAST_LADDER}`);
         // As the product's openHub(): a photo has settled and the clock and credit are up.
         await page.locator('.screen.on .cell:not([hidden]) img[src^="blob:"]').first().waitFor();
         await page.locator('[data-clock]').waitFor();
