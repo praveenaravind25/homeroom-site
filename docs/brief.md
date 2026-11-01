@@ -15,3 +15,5 @@
 - **Voice:** plain, warm, specific; no hype.
 
 The agent rules (triage, entry shape, voice, privacy) live in the pipeline brain at `projects/site.md`. Product context comes from the product repo's `vision.md` and `docs/design/studio-design.md`, read with `gh`.
+
+**Deploy (set up 2026-11-01):** Cloudflare Workers Builds runs `npx wrangler deploy` on every push to `main`. `wrangler.jsonc` publishes `./public` as static assets. The landing-page build must emit into `public/`, or update `assets.directory` (and add a build command in the Cloudflare dashboard if it needs one). `public/index.html` is a placeholder until then. Keep `noindex` and `robots.txt` `Disallow: /` until the owner says go.

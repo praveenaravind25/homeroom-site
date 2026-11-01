@@ -1,0 +1,7 @@
+// Cloudflare Workers static assets: deploys whatever the site build puts in ./public.
+// The landing-page card owns the build; keep `assets.directory` pointing at its output.
+{
+  "name": "homeroom-site",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public", "not_found_handling": "404-page" }
+}
