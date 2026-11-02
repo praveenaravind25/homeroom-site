@@ -15,6 +15,13 @@
  *   4. any string value from the real household config, when it exists on this machine
  *      (~/.homeroom/homeroom.local.json, or $HOMEROOM_LOCAL_CONFIG).
  *
+ * Plus the indexing guard (issue #4), driven by one flag, `"public"` in site.config.json:
+ *   5. public: false (or no config file): every page outside public/mockups/ carries
+ *      `<meta name="robots" content="noindex">`, and robots.txt has `Disallow: /`.
+ *   6. public: true: what stays hidden stays hidden. robots.txt still disallows
+ *      /mockups/ (pipeline-owned pages that carry no meta of their own) and 404.html keeps noindex.
+ * Going public or back to hidden is then one reviewable diff. docs/go-live.md has the switch.
+ *
  * Rule 4 ports the product's check-hygiene deny-list (scripts/hygiene-terms.ts there):
  * every string of 6+ characters in the real config becomes a term, generic words and
  * quick picks skipped. The terms are read at runtime and never written anywhere, and
@@ -41,6 +48,7 @@ export const RULES = {
   ip: 'private or loopback IP',
   entity: 'Home Assistant entity id (not in allowlist)',
   config: 'value from the real household config',
+  index: 'search indexing does not match site.config.json "public"',
 };
 
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
@@ -286,8 +294,84 @@ export function scanTree(root, ctx) {
   return listFiles(root).flatMap((rel) => scanFile(join(root, rel), rel, ctx));
 }
 
+// ---------------------------------------------------------------- indexing guard (issue #4)
+
+/** { public } from site.config.json. A missing file means hidden: deleting it can only re-hide the site. */
+export function loadSiteConfig(path = join(ROOT, 'site.config.json')) {
+  if (!existsSync(path)) return { public: false };
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    throw new Error(`check-site: ${displayPath(path)} isn't valid JSON`);
+  }
+  if (typeof parsed?.public !== 'boolean') throw new Error(`check-site: ${displayPath(path)} needs "public": true or false`);
+  return { public: parsed.public };
+}
+
+/** True when the page has a robots meta (any attribute order) whose content includes noindex. */
+export function hasNoindex(html) {
+  return (html.match(/<meta\b[^>]*>/gi) ?? []).some(
+    (tag) => /\bname\s*=\s*["']?robots\b/i.test(tag) && /\bcontent\s*=\s*["'][^"']*\bnoindex\b/i.test(tag),
+  );
+}
+
+/** Paths disallowed for every crawler (`User-agent: *` groups) in a robots.txt. */
+export function disallowedForAll(robots) {
+  const out = new Set();
+  let agents = [];
+  let inRules = false;
+  for (const raw of robots.split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, '').trim();
+    const m = line.match(/^([A-Za-z-]+)\s*:\s*(.*)$/);
+    if (!m) continue;
+    const key = m[1].toLowerCase();
+    const value = m[2].trim();
+    if (key === 'user-agent') {
+      if (inRules) agents = []; // a user-agent after rules starts a new group
+      inRules = false;
+      agents.push(value);
+    } else {
+      inRules = true;
+      if (key === 'disallow' && value && agents.includes('*')) out.add(value);
+    }
+  }
+  return out;
+}
+
+const MOCKUPS = join('public', 'mockups');
+
+/** Findings when the tree's indexing doesn't match the flag. Same shape as the privacy findings. */
+export function indexFindings(root, { public: isPublic }) {
+  const findings = [];
+  // `masked` carries the fix, not a value: nothing here is private.
+  const fail = (file, masked) => findings.push({ file, rule: 'index', line: 0, col: 0, where: 'site', masked });
+  const read = (rel) => (existsSync(join(root, rel)) ? readFileSync(join(root, rel), 'utf8') : null);
+
+  const robotsRel = join('public', 'robots.txt');
+  const robots = read(robotsRel);
+  const disallowed = robots === null ? new Set() : disallowedForAll(robots);
+  const pages = walk(join(root, 'public'), root).filter((f) => /\.html?$/i.test(f));
+
+  if (!isPublic) {
+    if (!disallowed.has('/')) fail(robotsRel, robots === null ? 'missing (needs "User-agent: *" + "Disallow: /")' : 'needs "Disallow: /" under "User-agent: *"');
+    // The mockup gallery is pipeline-owned (never hand-edited); robots.txt covers it.
+    for (const rel of pages) {
+      if (!rel.startsWith(MOCKUPS + sep) && !hasNoindex(read(rel))) fail(rel, 'missing <meta name="robots" content="noindex, nofollow">');
+    }
+  } else {
+    if (existsSync(join(root, MOCKUPS)) && !disallowed.has('/mockups/') && !disallowed.has('/')) {
+      fail(robotsRel, robots === null ? 'missing (needs "Disallow: /mockups/")' : 'needs "Disallow: /mockups/" under "User-agent: *"');
+    }
+    const notFound = join('public', '404.html');
+    const notFoundHtml = read(notFound);
+    if (notFoundHtml !== null && !hasNoindex(notFoundHtml)) fail(notFound, 'missing <meta name="robots" content="noindex, nofollow">');
+  }
+  return findings;
+}
+
 export function format(f) {
-  const loc = f.where === null ? `${f.file}:${f.line}:${f.col}` : `${f.file} [${f.where}${f.where === 'path' ? '' : `:${f.line}`}]`;
+  const loc = f.where === null ? `${f.file}:${f.line}:${f.col}` : f.where === 'site' ? f.file : `${f.file} [${f.where}${f.where === 'path' ? '' : `:${f.line}`}]`;
   return `${loc}  ${f.rule}: ${RULES[f.rule] ?? f.rule}  ${f.masked}`;
 }
 
@@ -305,12 +389,17 @@ function main() {
   if (deny.terms) console.log(`check-site: real-config deny-list loaded (${deny.terms.length} terms from ${displayPath(deny.path)}; values are never printed)`);
   else console.log(`check-site: no local config at ${displayPath(deny.path)}, so pattern rules only (expected in CI)`);
 
+  const site = loadSiteConfig(join(root, 'site.config.json'));
+  console.log(`check-site: site.config.json says ${site.public ? 'public (indexable; /mockups/ and 404 stay hidden)' : 'hidden (noindex + robots Disallow: /)'}`);
+
   const files = listFiles(root);
-  const findings = files.flatMap((rel) => scanFile(join(root, rel), rel, ctx));
+  const privacy = files.flatMap((rel) => scanFile(join(root, rel), rel, ctx));
+  const findings = [...privacy, ...indexFindings(root, site)];
   if (findings.length) {
     console.error(`check-site: FAILED, ${findings.length} finding${findings.length === 1 ? '' : 's'} in ${new Set(findings.map((f) => f.file)).size} file(s)`);
     for (const f of findings) console.error(`  ${format(f)}`);
-    console.error('Values are masked. Remove them, or (for a fake fixture entity id) add it to scripts/check-site.allowlist.json.');
+    if (privacy.length) console.error('Values are masked. Remove them, or (for a fake fixture entity id) add it to scripts/check-site.allowlist.json.');
+    if (privacy.length < findings.length) console.error('Indexing: fix the page/robots.txt, or flip "public" in site.config.json on purpose (see docs/go-live.md).');
     process.exit(1);
   }
   console.log(`check-site: clean (${files.length} files scanned)`);
