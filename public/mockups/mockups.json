@@ -2,6 +2,14 @@
  "generated": "2026-11-02",
  "mockups": [
   {
+   "slug": "site-issue-22",
+   "title": "Site: real photos on the wall imagery + the new text style (option D)",
+   "ref": "Site #22",
+   "date": "2026-11-02",
+   "thumb": "after.png",
+   "shots": 8
+  },
+  {
    "slug": "issue-87",
    "title": "Recipes \u00b7 Weekly shopping list \u2192 HA Shopping list, lock the week",
    "ref": "Product #87",
