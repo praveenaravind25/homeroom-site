@@ -1,11 +1,11 @@
 ---
-title: Who's at the door, from the kitchen wall
-date: 2026-11-02T06:27:52Z
-refs: [homeroom #71, homeroom #98]
-screenshot: /assets/log/cameras.png
-alt: The Cameras screen from the sample household's wall: a big Doorbell view, Driveway and Backyard beside it, and today's five camera events down the right.
+title: "Who's at the door: the wall answers"
+date: 2026-11-02T08:07:15Z
+refs: [homeroom #71, homeroom #98, homeroom #54]
+screenshot: /assets/log/doorbell.png
+alt: The sample household's wall a moment after the doorbell rang: the Doorbell camera full screen and live, Driveway and Backyard in the corner, and Door lock, Porch and Hold to talk along the bottom.
 ---
-Cameras now sits in the Rail, with one big view and two smaller ones, and tapping any of them opens it full screen.
-From there the porch light is one tap, while unlock and the garage need a deliberate hold.
-It doesn't oversell itself: it says "Still" until live video is actually running, and a camera that's gone quiet keeps its last picture, marked "As of" and the time.
-The stream only runs on the full-screen view, and it closes when you go back or the wall goes idle.
+Cameras now sits in the Rail, one big view and two smaller ones, and any of them opens full screen, with the porch light a tap away and unlock behind a deliberate hold.
+When someone rings the doorbell, the wall opens that same view on its own, whatever it was showing, even a dark Night screen.
+Close it, or leave it alone for about a minute, and it puts back exactly what was there before.
+The whole path is tested end to end with a fake doorbell, so nobody had to stand on the porch pressing the button.
