@@ -21,7 +21,7 @@ const PAGES = {
 };
 const TEASER_COUNT = 3;
 const SHOT = { w: 1263, h: 841 };             // the wall tablet, landscape
-const KEYS = new Set(['title', 'date', 'refs', 'screenshot', 'render', 'alt']);
+const KEYS = new Set(['title', 'date', 'refs', 'screenshot', 'render', 'alt', 'before', 'before_alt', 'labels']);
 
 /* ───────── Parse ───────── */
 
@@ -61,7 +61,7 @@ export const sentences = s => s.trim() ? s.trim().split(/(?<=[.?!]["'”’)]?)\
 
 function validate(slug, d, renders) {
   const errors = [];
-  const prose = { title: d.title, body: d.body, alt: d.alt };
+  const prose = { title: d.title, body: d.body, alt: d.alt, before_alt: d.before_alt };
 
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) errors.push('file name must be a lowercase slug, e.g. the-rail.md (it becomes the #anchor)');
 
@@ -90,19 +90,28 @@ function validate(slug, d, renders) {
     if (EMOJI.test(v)) errors.push(`${k} has an emoji`);
   }
 
-  if (d.screenshot !== undefined) {
-    if (typeof d.screenshot !== 'string' || !/^\/assets\/log\/[a-z0-9-]+\.(png|jpe?g|webp)$/.test(d.screenshot))
-      errors.push(`screenshot "${d.screenshot}" should be a file under /assets/log/ (png, jpg or webp)`);
+  for (const key of ['screenshot', 'before']) {
+    const v = d[key];
+    if (v === undefined) continue;
+    if (typeof v !== 'string' || !/^\/assets\/log\/[a-z0-9-]+\.(png|jpe?g|webp)$/.test(v))
+      errors.push(`${key} "${v}" should be a file under /assets/log/ (png, jpg or webp)`);
     else {
-      const file = resolve(PUBLIC, '.' + d.screenshot);
-      if (!file.startsWith(PUBLIC + sep) || !existsSync(file)) errors.push(`screenshot ${d.screenshot} not found in public/`);
+      const file = resolve(PUBLIC, '.' + v);
+      if (!file.startsWith(PUBLIC + sep) || !existsSync(file)) errors.push(`${key} ${v} not found in public/`);
       else {
         const size = imageSize(readFileSync(file));
-        if (!size) errors.push(`screenshot ${d.screenshot}: can't read its dimensions`);
-        else if (size.w !== SHOT.w || size.h !== SHOT.h) errors.push(`screenshot ${d.screenshot} is ${size.w}×${size.h} (must be ${SHOT.w}×${SHOT.h})`);
+        if (!size) errors.push(`${key} ${v}: can't read its dimensions`);
+        else if (size.w !== SHOT.w || size.h !== SHOT.h) errors.push(`${key} ${v} is ${size.w}×${size.h} (must be ${SHOT.w}×${SHOT.h})`);
       }
     }
   }
+  // A before/after pair: `before` sits beside the screenshot (the after), each with its own alt.
+  if (d.before !== undefined) {
+    if (!d.screenshot) errors.push('before needs a screenshot (the after) to sit beside');
+    if (!(typeof d.before_alt === 'string' && d.before_alt.length >= 10)) errors.push('before_alt is required with before (describe what a visitor would see)');
+  } else if (d.before_alt !== undefined || d.labels !== undefined) errors.push('before_alt and labels only go with before');
+  if (d.labels !== undefined && !(Array.isArray(d.labels) && d.labels.length === 2))
+    errors.push('labels takes two short captions, before then after: [Corner ovals, Option D]');
   if (d.render !== undefined && !renders.has(d.render))
     errors.push(`render "${d.render}" isn't one the site can draw (${[...renders].join(', ')})`);
   if (d.screenshot && d.render) errors.push('use screenshot or render, not both');
@@ -162,11 +171,33 @@ function media(e, cls = '') {
   return '';
 }
 
+// Before and after, side by side under the text (two different photos, so a wipe would read as a slideshow).
+// The landing teaser shows the after alone.
+function pair(e) {
+  const [b, a] = e.labels ?? [];
+  const fig = (src, alt, lab, cap, i) => `
+          <figure class="rv" style="--i:${i}"><img class="shot" src="${esc(src)}" width="${SHOT.w}" height="${SHOT.h}" alt="${esc(alt)}" loading="lazy" decoding="async"><figcaption><span class="lab">${lab}</span>${cap ? `<span>${esc(cap)}</span>` : ''}</figcaption></figure>`;
+  return `
+    <li class="entry" id="${e.slug}">
+      <time datetime="${e.date}" class="rv">${longDate(e.date)}</time>
+      <div class="body pair">
+        <div class="rv" style="--i:1">
+          <h2>${esc(e.title)}</h2>
+          <p>${esc(e.body)}</p>
+          <div class="ref">${esc(refLine(e.refs))}</div>
+        </div>
+        <div class="cmp">${fig(e.before, e.before_alt, 'Before', b, 1)}${fig(e.screenshot, e.alt, 'After', a, 2)}
+        </div>
+      </div>
+    </li>`;
+}
+
 function renderLog(entries) {
   if (!entries.length) return `
   <p class="log-empty rv">Nothing logged yet. The first chapter lands here when it ships.</p>`;
   return `
   <ol class="entries">${entries.map(e => {
+    if (e.before) return pair(e);
     const m = media(e, ' rv');
     return `
     <li class="entry" id="${e.slug}">

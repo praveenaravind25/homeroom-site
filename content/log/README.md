@@ -22,12 +22,15 @@ One "how" sentence if the pipeline story is interesting.
 | `screenshot` | no | A file in `public/assets/log/`, exactly 1263×841, from the sample-data build |
 | `render` | no | Instead of a screenshot: a live render the site draws itself (`today`, `week`, `home`, `wall:<photo>`). A stand-in until screenshots exist. |
 | `alt` | with a screenshot or render | What a visitor would see |
+| `before` | no | A before/after entry: a second 1263×841 file in `public/assets/log/`, shown beside `screenshot` (the after), both under the text. The landing teaser shows the after alone. |
+| `before_alt` | with `before` | What a visitor would see in the before |
+| `labels` | no, with `before` | Two short captions, before then after: `[Corner ovals, Option D]` |
 
 No screenshot and no render is fine: the entry drops its image column.
 
 **Body:** 2–4 sentences, one paragraph, plain text (no Markdown or HTML). Voice: plain, warm, specific, a little dry. No hype words, no exclamation marks, no emoji.
 
-**Privacy:** only the sample household (Avery, Jordan, Sam, Riley) and the fake photos. No real names, calendar contents, device or entity names, addresses or IPs.
+**Privacy:** text comes only from the sample household (Avery, Jordan, Sam, Riley). Photos are the product's fixture photos or the owner-approved set in `source-photos/owner/` (`npm run shots -- --photo owner-03`). Never name or identify the people in an owner photo, in alt text or anywhere else: describe the scene. No real names, calendar contents, device or entity names, addresses or IPs.
 
 ## Build and check
 
