@@ -200,6 +200,15 @@ const SCREENS = {
     await page.locator('[data-rail] [data-add]').click();
     await page.locator('[data-sheet][role="dialog"]').waitFor();
   },
+  // #71 (product PR #98): one big tile, two small ones and today's events, on snapshots only.
+  cameras: async (page) => {
+    await nav(page, 'cameras');
+    // Every tile shows a decoded frame, never the empty-tile icon (a blank tile isn't worth shipping).
+    await page.waitForFunction(() => {
+      const tiles = [...document.querySelectorAll('[data-screen="cameras"] [data-camera-tile]')];
+      return tiles.length === 3 && tiles.every((t) => [...t.querySelectorAll('img[src^="blob:"]')].some((i) => i.complete && i.naturalWidth > 0));
+    }, null, { timeout: 15_000 });
+  },
 };
 
 async function toRail(page) {
