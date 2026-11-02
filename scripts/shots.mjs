@@ -246,6 +246,19 @@ const LOG_SCREENS = {
       for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
     });
   },
+  // #54 (product PR #100): one press on the fake doorbell wakes Ambient into the full camera view,
+  // as the product's e2e/takeover.spec.ts does it. The sample build's own fake, no doorbell needed.
+  doorbell: async (page) => {
+    await page.waitForFunction(() => window.__homeroom?.channelOpen?.() === true, null, { timeout: 8000 });
+    const res = await page.request.post(`${origin}/api/v1/dev/doorbell`, { data: { cameraId: 'doorbell-cam' } });
+    if (res.status() !== 204) throw new Error(`fake doorbell answered ${res.status()}`);
+    const view = page.locator('[data-takeover] [data-camera-view="doorbell-cam"]');
+    await view.waitFor();
+    await page.locator('.hub[data-mode="takeover"][data-reason="doorbell"]').waitFor();
+    await view.and(page.locator('[data-phase="live"]')).waitFor({ timeout: 8000 });
+    // The view shows a decoded frame, never an empty stage (a blank view isn't worth shipping).
+    await page.waitForFunction(() => [...document.querySelectorAll('[data-takeover] [data-camera-view] img')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15_000 });
+  },
 };
 
 const outFor = (name) => (LOG_SCREENS[name] ? LOG_OUT : OUT);
