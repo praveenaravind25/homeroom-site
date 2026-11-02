@@ -131,6 +131,29 @@ test('--check fails when public/ is stale', () => {
   } finally { s.done(); }
 });
 
+test('a before/after entry: both images side by side under the text; the teaser shows the after alone', () => {
+  const s = site({ 'pair.md': entry({ screenshot: '/assets/log/after.png', alt: 'The wall after, with a gradient.', before: '/assets/log/before.png', before_alt: 'The wall before, with ovals.', labels: '[Corner ovals, Option D]' }) },
+                 { 'public/assets/log/after.png': png(1263, 841), 'public/assets/log/before.png': png(1263, 841) });
+  try {
+    assert.equal(s.run().status, 0);
+    const log = s.read('public/log/index.html');
+    assert.match(log, /class="body pair">\s*<div class="rv"[^>]*>\s*<h2>/, 'text first');
+    assert.match(log, /<div class="cmp">[\s\S]*src="\/assets\/log\/before.png"[^>]*alt="The wall before, with ovals."[\s\S]*<span class="lab">Before<\/span><span>Corner ovals<\/span>[\s\S]*src="\/assets\/log\/after.png"[\s\S]*<span class="lab">After<\/span><span>Option D<\/span>/);
+    const home = s.read('public/index.html');
+    assert.match(home, /src="\/assets\/log\/after.png"/);
+    assert.doesNotMatch(home, /before.png/);
+    assert.equal(s.run('--check').status, 0, 'rendering is stable');
+  } finally { s.done(); }
+});
+test('before needs a screenshot to sit beside', () =>
+  fails({ before: '/assets/log/b.png', before_alt: 'The wall before the change.' }, undefined, /before needs a screenshot/, { 'public/assets/log/b.png': png(1263, 841) }));
+test('before needs its own alt text', () =>
+  fails({ screenshot: '/assets/log/a.png', alt: 'The wall after the change.', before: '/assets/log/b.png' }, undefined, /before_alt is required/,
+        { 'public/assets/log/a.png': png(1263, 841), 'public/assets/log/b.png': png(1263, 841) }));
+test('a before image must be 1263×841 too', () =>
+  fails({ screenshot: '/assets/log/a.png', alt: 'The wall after the change.', before: '/assets/log/b.png', before_alt: 'The wall before the change.' }, undefined, /before \/assets\/log\/b.png is 800×600/,
+        { 'public/assets/log/a.png': png(1263, 841), 'public/assets/log/b.png': png(800, 600) }));
+
 test('escapes HTML in prose', () => {
   const s = site({ 'x.md': entry({ title: 'Tags & things' }, 'Jordan wrote a list. It says milk & eggs.') });
   try {

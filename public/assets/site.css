@@ -23,6 +23,9 @@
   --rail-lead:220ms; --rail-stagger:50ms; --dur-indicator:320ms; --rail-rise-from:translateY(16px);
   --dur-fill:180ms; --dur-ripple:40ms; --dur-tick:260ms; --tick-travel:10px;
   --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+  /* homeroom tokens.json v0.19 → scrim (option D, homeroom #104): every glyph on a photo carries its own shadow. */
+  --c-scrim:10 9 8;
+  --text-shadow:0 1px 3px rgb(var(--c-scrim) / .6),0 2px 20px rgb(var(--c-scrim) / .5),0 0 48px rgb(var(--c-scrim) / .3);
   /* Site-only (not product tokens): the web type scale, and the Ken Burns cycle. */
   --site-h1:clamp(52px,6.4vw,104px); --site-h2:clamp(40px,4.6vw,72px); --site-line:clamp(17px,1.45vw,21px);
   --site-gutter:clamp(24px,5.6vw,80px);
@@ -61,14 +64,14 @@ img{max-width:none}
 .kb{position:absolute;inset:0;overflow:hidden}
 .kb img{width:100%;height:100%;object-fit:cover;display:block;animation:kb var(--kb-cycle) var(--ease-drift) infinite alternate;transform-origin:62% 58%}
 @keyframes kb{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.1) translate(-1.6%,-1.1%)}}
-.w-ov{position:absolute;inset:0;transition:opacity var(--dur-overlay-in) var(--ease-out) var(--delay-overlay-in),transform var(--dur-rise) var(--ease-settle) var(--delay-overlay-in)}
+.kb picture{display:contents}
+.w-ov{position:absolute;inset:0;text-shadow:var(--text-shadow);transition:opacity var(--dur-overlay-in) var(--ease-out) var(--delay-overlay-in),transform var(--dur-rise) var(--ease-settle) var(--delay-overlay-in)}
 .wall.yielded .w-ov{opacity:0;transform:var(--exit-to);transition:opacity var(--dur-overlay-out) var(--ease-out),transform var(--dur-overlay-out) var(--ease-out)}
 .w-ov .s{position:absolute;inset:0}
 .w-ov .abs{position:absolute;transition:opacity 300ms var(--ease-out)}
-.w-ov .s-bl{background:radial-gradient(120% 95% at 0% 100%,rgb(10 9 8 / .78) 0%,rgb(10 9 8 / .72) 30%,rgb(10 9 8 / 0) 66%)}
-.w-ov .s-tr{background:radial-gradient(45% 40% at 100% 0%,rgb(10 9 8 / .72) 0%,rgb(10 9 8 / 0) 100%)}
-.w-ov .s-tl{background:radial-gradient(40% 30% at 0% 0%,rgb(10 9 8 / .72) 0%,rgb(10 9 8 / 0) 100%)}
-.w-ov .s-br{background:radial-gradient(42% 42% at 100% 100%,rgb(10 9 8 / .74) 0%,rgb(10 9 8 / 0) 100%)}
+/* homeroom tokens.json v0.19 → scrimGeometry.layouts.ambient.base (option D, homeroom #104): one full-width
+   bottom gradient, px up from the Wall's bottom edge. The Wall is drawn at 1263×841, so the px carry over as-is. */
+.w-ov .s-d{background:linear-gradient(to top,rgb(var(--c-scrim) / .46) 0px,rgb(var(--c-scrim) / .42) 140px,rgb(var(--c-scrim) / .34) 300px,rgb(var(--c-scrim) / .14) 420px,rgb(var(--c-scrim) / 0) 520px)}
 .w-temp{top:48px;right:56px;text-align:right}
 .w-temp b{display:block;font-size:52px;font-weight:500;line-height:1.05}
 .w-temp span{font-size:26px;color:var(--c-soft)}
@@ -82,7 +85,8 @@ img{max-width:none}
 .w-cue{right:56px;bottom:56px;text-align:right}
 .w-cue b{display:block;font-size:34px;font-weight:550;letter-spacing:-.01em;line-height:1.15}
 .w-cue span{display:block;font-size:34px;font-weight:550;color:var(--c-soft);letter-spacing:-.01em;line-height:1.15}
-.w-cue svg{margin-top:14px;color:var(--c-soft);animation:bob 2.4s var(--ease-drift) infinite alternate}
+/* An SVG takes no text-shadow: a static drop-shadow stands in for it (nothing animates the filter). */
+.w-cue svg{margin-top:14px;color:var(--c-soft);filter:drop-shadow(0 1px 3px rgb(var(--c-scrim) / .6));animation:bob 2.4s var(--ease-drift) infinite alternate}
 @keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}
 
 /* ───────── The Rail look (.rl): the product's screens, rebuilt from house-test.html ───────── */
@@ -200,8 +204,9 @@ img{max-width:none}
 .device .fit{border-radius:6px}
 .b-lamp{position:absolute;left:50%;bottom:-30%;width:120vw;height:70vh;transform:translateX(-30%);background:radial-gradient(50% 50% at 50% 50%,rgb(240 212 155 / .10),transparent 70%);pointer-events:none}
 
-/* The top bar: a real link to the build log, over the Wall's top-left scrim. Steps back once the tablet appears. */
-.top{position:absolute;left:clamp(24px,4.4vw,64px);top:28px;z-index:6;display:flex;gap:12px;align-items:center;transition:opacity 300ms var(--ease-out)}
+/* The top bar: a real link to the build log, over the photo (held up by --text-shadow alone, like the Wall's
+   temperature). Steps back once the tablet appears. */
+.top{position:absolute;left:clamp(24px,4.4vw,64px);top:28px;z-index:6;display:flex;gap:12px;align-items:center;text-shadow:var(--text-shadow);transition:opacity 300ms var(--ease-out)}
 .top a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;margin-left:-10px}
 .top .brand{font-size:clamp(20px,1.8vw,26px);font-weight:650;letter-spacing:-.01em}
 .top .nav{font-size:clamp(16px,1.4vw,20px);font-weight:550;color:var(--c-soft)}
@@ -272,6 +277,12 @@ img{max-width:none}
 .logc .shot{transition:transform 260ms var(--ease-press)}
 @media (hover:hover){.logc:hover .shot{transform:translateY(-3px)}}
 .entry .body.solo{grid-template-columns:minmax(0,1fr)}
+/* A before/after entry: the text keeps its column; the pair spans the body below it, 2-up. */
+.entry .body.pair{grid-template-columns:minmax(0,1fr);gap:clamp(28px,3vw,40px)}
+.entry .cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.entry .cmp figure{margin:0}
+.entry .cmp figcaption{display:flex;align-items:baseline;gap:10px;margin-top:14px}
+.entry .cmp figcaption span:not(.lab){font-size:15px;color:var(--c-mute)}
 .log-empty{max-width:1280px;margin:0 auto;padding:0 var(--site-gutter) clamp(72px,12vh,140px);font-size:17px;color:var(--c-rail-soft)}
 
 /* Phone width: must not break (a dedicated responsive polish pass follows). */
@@ -285,8 +296,11 @@ img{max-width:none}
   /* The Wall's overlay is drawn for 1263px; cover-cropped on a phone it would read as broken.
      Until the tablet appears, the overlay steps back and a phone-sized cue takes its place. */
   .js .stage:not(.b-on) .w-time,.js .stage:not(.b-on) .w-temp{opacity:0}
-  .phone-cue{display:block;position:absolute;left:24px;right:24px;bottom:56px;z-index:6;margin:0;font-size:32px;font-weight:550;letter-spacing:-.01em;line-height:1.15;transition:opacity 300ms var(--ease-out)}
-  .phone-cue::before{content:"";position:absolute;inset:-180px -24px -56px;z-index:-1;background:linear-gradient(to top,rgb(10 9 8 / .78),rgb(10 9 8 / .72) 45%,rgb(10 9 8 / 0))}
+  .phone-cue{display:block;position:absolute;left:24px;right:24px;bottom:56px;z-index:6;margin:0;font-size:32px;font-weight:550;letter-spacing:-.01em;line-height:1.15;text-shadow:var(--text-shadow);transition:opacity 300ms var(--ease-out)}
+  /* The same ambient stops as .w-ov .s-d, in CSS px from the screen's bottom edge (the Wall renders ~1:1 here). */
+  .phone-cue::before{content:"";position:absolute;left:-24px;right:-24px;bottom:-56px;height:520px;z-index:-1;background:linear-gradient(to top,rgb(var(--c-scrim) / .46) 0px,rgb(var(--c-scrim) / .42) 140px,rgb(var(--c-scrim) / .34) 300px,rgb(var(--c-scrim) / .14) 420px,rgb(var(--c-scrim) / 0) 520px)}
+  /* Site chrome, not the Wall: on a phone's centre crop the brand lands on bright detail, so a 120 px top fade. */
+  .top::before{content:"";position:absolute;left:calc(-1 * clamp(24px,4.4vw,64px));top:-28px;width:100vw;height:120px;z-index:-1;pointer-events:none;background:linear-gradient(to bottom,rgb(var(--c-scrim) / .3),rgb(var(--c-scrim) / 0))}
   .phone-cue b{display:block;font-weight:inherit}
   .phone-cue span{display:block;color:var(--c-soft)}
   .b-on .phone-cue{opacity:0}
@@ -297,6 +311,7 @@ img{max-width:none}
   .entry{grid-template-columns:1fr;gap:14px;padding:32px 0 48px}
   .entry time{position:static}
   .entry .body{grid-template-columns:1fr}
+  .entry .cmp{grid-template-columns:1fr;gap:28px}
 }
 
 /* ───────── No JS: a still Wall hero, then the page continues ───────── */

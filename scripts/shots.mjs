@@ -5,12 +5,22 @@
  *   npm run shots -- --ref <sha|branch>
  *
  * Writes public/shots/<name>.png (each exactly 1263×841) and public/shots/manifest.json
- * ({ "sha": … }, nothing else).
+ * ({ "sha": … }, plus "photos": { shot: owner photo } for any shot taken with --photo; nothing else).
  *
  *   npm run shots -- --only shopping  a build-log image (LOG_SCREENS): public/assets/log/<name>.png,
  *                                     its product SHA recorded in public/assets/log/manifest.json.
  *                                     Never part of a default run: a log entry's image is pinned to
  *                                     the merge it describes, so it doesn't follow main.
+ *
+ *   npm run shots -- --only ambient --photo owner-03
+ *                                     the Wall shows one owner-approved photo instead of the product's
+ *                                     fixture photos: the clone's fixtures/photos is swapped for
+ *                                     source-photos/owner/owner-03.jpg alone (favourite, no people, no
+ *                                     place, no date, so its credit names nobody). Works for default shots
+ *                                     and log screens. Only a file in source-photos/owner/ is accepted;
+ *                                     anything else, or a missing file, aborts. The choice is recorded per
+ *                                     shot in public/shots/manifest.json ("photos"). The text on screen is
+ *                                     still the sample household, through every check below.
  *
  * Privacy, in order of defence:
  *   - the product is a fresh clone in .cache/ (gitignored), so there is no local config in it;
@@ -27,11 +37,12 @@
  * its start pose, and Playwright's screenshot settles every other animation.
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { imageSize } from './build-log.mjs';
 import { loadAllowlist, loadDenyList, scanFile, format } from './check-site.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
@@ -40,6 +51,7 @@ const CACHE = join(ROOT, '.cache');
 const PRODUCT = join(CACHE, 'homeroom');
 const OUT = join(ROOT, 'public', 'shots');
 const LOG_OUT = join(ROOT, 'public', 'assets', 'log');
+const OWNER_PHOTOS = join(ROOT, 'source-photos', 'owner'); // the owner-approved set; never deployed
 
 const W = 1263;
 const H = 841;
@@ -65,7 +77,44 @@ function run(cmd, args, opts = {}) {
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
-  return i === -1 ? fallback : process.argv[i + 1];
+  if (i === -1) return fallback;
+  const v = process.argv[i + 1];
+  if (v === undefined || v.startsWith('--')) die(`--${name} needs a value`);
+  return v;
+}
+
+// ---------------------------------------------------------------- 1b. an owner photo instead of the fixtures
+
+/**
+ * Resolves `--photo owner-03` to source-photos/owner/owner-03.jpg, or aborts. Only a plain JPEG
+ * file that really lives in that folder passes: no paths, no other names, no symlinks out of it.
+ */
+export function ownerPhoto(name, dir = OWNER_PHOTOS) {
+  if (!/^owner-\d{2}$/.test(name)) throw new Error(`--photo takes an owner photo's name, e.g. owner-03 (a file in source-photos/owner/), not "${name}"`);
+  const file = join(dir, `${name}.jpg`);
+  if (!existsSync(file)) throw new Error(`--photo ${name}: no source-photos/owner/${name}.jpg`);
+  if (lstatSync(file).isSymbolicLink() || dirname(realpathSync(file)) !== realpathSync(dir)) throw new Error(`--photo ${name}: not a plain file in source-photos/owner/`);
+  const buf = readFileSync(file);
+  const size = buf[0] === 0xff && buf[1] === 0xd8 ? imageSize(buf) : null;
+  if (!size) throw new Error(`--photo ${name}: not a readable JPEG`);
+  return { name, file, width: size.w, height: size.h };
+}
+
+/**
+ * Puts the clone's fixture photos back as committed, then (with a photo) replaces the fake library
+ * with that one photo, so the Wall can't show anything else. The fixture is a favourite with no
+ * people, place or date: the credit reads as a favourite and names nobody. The same file serves both
+ * renditions; the hub scales the thumb (the server only reports its size, from these numbers).
+ */
+function usePhoto(photo) {
+  const dir = join(PRODUCT, 'fixtures', 'photos');
+  run('git', ['-C', PRODUCT, 'checkout', '--quiet', '--', 'fixtures/photos']);
+  run('git', ['-C', PRODUCT, 'clean', '-fdq', '--', 'fixtures/photos']);
+  if (!photo) return;
+  for (const size of ['display', 'thumb']) copyFileSync(photo.file, join(dir, size, `${photo.name}.jpg`));
+  const fixture = { file: photo.name, width: photo.width, height: photo.height, takenAt: null, isFavorite: true, people: [], duplicateGroupId: null, place: null };
+  writeFileSync(join(dir, 'manifest.json'), `${JSON.stringify([fixture], null, 2)}\n`);
+  log(`photos: ${photo.name} only (${photo.width}×${photo.height})`);
 }
 
 // ---------------------------------------------------------------- 1. a fresh product clone
@@ -245,6 +294,9 @@ const LOG_SCREENS = {
   },
   // #54 (product PR #100): one press on the fake doorbell wakes Ambient into the full camera view,
   // as the product's e2e/takeover.spec.ts does it. The sample build's own fake, no doorbell needed.
+  // homeroom-site #22 (product #104): Ambient's option D text style, pinned for the build log's "after".
+  // Run with an owner photo: --only option-d --photo owner-03.
+  'option-d': async () => {},
   doorbell: async (page) => {
     await page.waitForFunction(() => window.__homeroom?.channelOpen?.() === true, null, { timeout: 8000 });
     const res = await page.request.post(`${origin}/api/v1/dev/doorbell`, { data: { cameraId: 'doorbell-cam' } });
@@ -397,9 +449,17 @@ async function main() {
   const names = only ?? Object.keys(SCREENS);
   const unknown = names.filter((n) => !SCREENS[n] && !LOG_SCREENS[n]);
   if (unknown.length) die(`unknown screen(s): ${unknown.join(', ')}`);
+  let photo = null;
+  try {
+    const p = arg('photo', null);
+    photo = p === null ? null : ownerPhoto(p);
+  } catch (e) {
+    die(e.message);
+  }
 
   const sha = process.argv.includes('--no-clone') ? reuse() : freshClone(ref);
   if (!process.argv.includes('--no-build')) build();
+  usePhoto(photo);
 
   const home = mkdtempSync(join(tmpdir(), 'homeroom-shots-home-'));
   const dataDir = mkdtempSync(join(tmpdir(), 'homeroom-shots-data-'));
@@ -430,9 +490,16 @@ async function main() {
 
   const files = result.shots.map((n) => join(outFor(n), `${n}.png`));
   // public/shots/ is one product commit: its manifest moves only when one of its shots does.
-  if (result.shots.some((n) => SCREENS[n])) {
-    writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify({ sha }, null, 2)}\n`);
-    files.push(join(OUT, 'manifest.json'));
+  // "photos" names the owner photo behind each shot that used one (merged; a fixture reshoot drops it).
+  const shot = result.shots.filter((n) => SCREENS[n]);
+  if (shot.length) {
+    const path = join(OUT, 'manifest.json');
+    const prev = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).photos ?? {} : {};
+    const photos = { ...prev };
+    for (const n of shot) photo ? (photos[n] = photo.name) : delete photos[n];
+    const sorted = Object.fromEntries(Object.keys(photos).sort().map((k) => [k, photos[k]]));
+    writeFileSync(path, `${JSON.stringify(Object.keys(sorted).length ? { sha, photos: sorted } : { sha }, null, 2)}\n`);
+    files.push(path);
   }
   // Log images are pinned one by one, so their manifest is a name → SHA map, merged.
   const logged = result.shots.filter((n) => LOG_SCREENS[n]);

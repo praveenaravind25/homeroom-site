@@ -27,11 +27,14 @@ If a generic word from the real config trips the check (a list name, a room), ad
 npm run shots                    # product @ main
 npm run shots -- --ref <sha>     # a specific product commit
 npm run shots -- --only week,who # a subset
+npm run shots -- --only ambient --photo owner-03   # the Wall on an owner-approved photo
 ```
 
 The script makes a fresh clone of `praveenaravind25/homeroom` in `.cache/` (gitignored), installs it, builds it and serves it on a config written from the product's `config/homeroom.example.json`, with every source pinned to `fake`. It aborts unless the product's own config loader and the running server both report only fake sources and only the sample household (Avery, Jordan, Sam, Riley). The server runs with `HOME` set to an empty temp dir, so `~/.homeroom` is unreachable.
 
-It writes eight 1263×841 PNGs to `public/shots/` (`ambient`, `glance`, `rail-today`, `week`, `home`, `who`, `chores`, `add-sheet`) plus `manifest.json` (the product commit SHA only). The shots are stripped of metadata and put through the privacy check before the script exits.
+It writes eight 1263×841 PNGs to `public/shots/` (`ambient`, `glance`, `rail-today`, `week`, `home`, `who`, `chores`, `add-sheet`) plus `manifest.json` (the product commit SHA, and under `photos` the owner photo behind any shot taken with `--photo`). The shots are stripped of metadata and put through the privacy check before the script exits.
+
+`--photo owner-NN` swaps the clone's fixture photos for one file from `source-photos/owner/` (a favourite with no people, place or date, so its credit names nobody). It accepts nothing else: a path, another name, a symlink out of the folder or a missing file aborts the run. Everything else about the run (fake config, sample household, empty `HOME`, PNG strip, privacy check) is unchanged. Today `ambient.png` uses `owner-03` and `glance.png` uses `owner-06`.
 
 Build-log images are separate screens, captured only by name and never in a default run, because a log entry's image stays pinned to the merge it describes. `npm run shots -- --ref <merge-sha> --only shopping` writes `public/assets/log/shopping.png` (the sample box's next week as one Shopping list, from the product's generated CC0 fixtures in `fixtures/recipes/`) and records its product SHA in `public/assets/log/manifest.json`. These images get the same fake-only config, empty `HOME`, PNG strip and privacy check as the others. To add one, add an entry to `LOG_SCREENS` in `scripts/shots.mjs`.
 
