@@ -1,20 +1,26 @@
 /* Homeroom site: the product's Rail screens, rebuilt as live HTML from the product's
    docs/design/reference/rail-v1/house-test.html. Shared by / and /log/.
-   Sample household only (the product's sample-data build): Avery, Jordan, Sam, Riley. Fake photos only.
+   Text is the sample household only (the product's sample-data build): Avery, Jordan, Sam, Riley.
+   Photos are the owner-approved set (source-photos/owner/), never captioned with who is in them;
+   the camera tile keeps a fixture photo, since real people in a LIVE tile would read as surveillance.
    Every screen renders into the 1111×717 content box of a 1263×841 hub, exactly as the shell gives it. */
 (function(){
 'use strict';
 
+// Keys double as build-log renders (`render: wall:<key>`), read by scripts/build-log.mjs.
 const IMG = {
-  hero:'/assets/photos/harbour-dusk.jpg',
+  hero:'/assets/photos/owner-02-1600.webp',
   cam:'/assets/photos/forest-path.jpg',
-  meadow:'/assets/photos/meadow-evening-760.jpg',
-  alpine:'/assets/photos/alpine-morning-760.jpg',
+  lake:'/assets/photos/owner-06-760.webp',
+  hands:'/assets/photos/owner-01-760.webp',
 };
+// Intrinsic size (so a lazy image reserves its box) and crop (faces above the Wall's gradient; #22's direction).
+const DIM = {hero:[1600,1067], lake:[760,570], hands:[760,608]};
+const POS = {hero:'50% 45%', lake:'50% 55%', hands:'45% 60%'};
 const ALT = {
-  hero:'A sample photo: a harbour at dusk, the sun behind dark hills.',
-  meadow:'A sample photo: green hills at sunset.',
-  alpine:'A sample photo: blue ridges under a pale sun.',
+  hero:'A couple in flower garlands, back to back under glass pendant lights against a gold wall.',
+  lake:'Three people smiling at a lookout above a lake ringed by pines.',
+  hands:'Two hands loosely joined over a field of soft red foliage.',
 };
 const P = {A:{n:'Avery',c:'var(--c-person-1)',home:true},J:{n:'Jordan',c:'var(--c-person-2)',home:false},S:{n:'Sam',c:'var(--c-person-3)',home:false},R:{n:'Riley',c:'var(--c-person-4)',home:true},H:{n:'Household',c:'var(--c-person-household)',home:true}};
 const PEOPLE = ['A','J','S','R'];
@@ -123,15 +129,16 @@ const RAIL = [['today','cal','Today'],['week','week','Week'],['meals','meals','M
 const HEAD = {today:['Tuesday, October 27','10:42 · 64° rain after 3'],week:['Week','This week · Oct 25 – 31'],week2:['Week','Next week · Nov 1 – 7'],home:['Home','2 lights on · 70° heat · locked'],homelit:['Home','4 lights on · 70° heat · locked']};
 function hubHTML(){
   return `<div class="h-rail"><span class="h-ind"></span>${RAIL.map(r=>`<span class="h-nav" data-k="${r[0]}">${I(r[1],24)}${r[2]}</span>`).join('')}
-    <span class="h-photos"><span class="thumb"><img src="${IMG.hero}" alt=""></span>Photos</span></div>
+    <span class="h-photos"><span class="thumb"><img src="${IMG.hero}" alt="" style="object-position:${POS.hero}"></span>Photos</span></div>
     <div class="h-head"><div><div class="h-title"></div><div class="h-sum"></div></div><div style="flex:1"></div>
       <span class="row" style="gap:6px">${PEOPLE.map(k=>av(k,34,!P[k].home)).join('')}</span><span class="icn">${I('bell',20)}<span class="badge">2</span></span><span class="btn pri">${I('plus',18)} Add</span></div>
     <div class="h-content">${scrToday()}${scrWeek()}${scrHome()}</div>`;
 }
 /* The Wall's overlay without the cue: used for build-log thumbnails. The hero's Wall is static HTML (works without JS). */
 function wallHTML(photo){
-  return `<div class="kb"><img src="${IMG[photo]}" alt="" loading="lazy"></div>
-  <div class="w-ov"><div class="s s-bl"></div><div class="s s-tr"></div>
+  const [w,h] = DIM[photo] || [1263,841];
+  return `<div class="kb"><img src="${IMG[photo]}" alt="" width="${w}" height="${h}" loading="lazy" decoding="async" style="object-position:${POS[photo]||'50% 50%'}"></div>
+  <div class="w-ov"><div class="s s-d"></div>
     <div class="abs w-temp"><b>64°</b><span>Rain after 3</span></div>
     <div class="abs w-time"><div class="w-date">Tuesday, October 27</div><div class="w-clock">10:42</div>
       <div class="w-next"><i>NEXT</i><b>11 AM&nbsp; Library story time</b><span>Riley</span></div></div></div>`;
