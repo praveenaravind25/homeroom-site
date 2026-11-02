@@ -1,6 +1,7 @@
 /**
  * Self-test for scripts/check-site.mjs (issue #3, AC11): one seeded bad input per
- * rule proves it fires, the masks hold, and the real tree passes.
+ * rule proves it fires, the masks hold, and the real tree passes. Issue #4 adds the
+ * indexing guard: hidden vs public, each tested on a throwaway site.
  *
  * Every bad string here is obviously fake and assembled at runtime (joined from
  * parts), so this file passes the check it tests.
@@ -8,11 +9,13 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { after, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crc32, deflateSync } from 'node:zlib';
-import { configTerms, format, loadAllowlist, loadDenyList, scanFile, scanText, scanTree } from './check-site.mjs';
+import {
+  configTerms, disallowedForAll, format, hasNoindex, indexFindings, loadAllowlist, loadDenyList, loadSiteConfig, scanFile, scanText, scanTree,
+} from './check-site.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
 const CLI = join(import.meta.dirname, 'check-site.mjs');
@@ -155,7 +158,9 @@ describe('no local config (CI)', () => {
   test('pattern rules still run, and the CLI says the deny-list is off', () => {
     const tree = join(tmp, 'clean');
     mkdirSync(join(tree, 'public'), { recursive: true });
-    writeFileSync(join(tree, 'public', 'index.html'), '<h1>Homeroom</h1><p>Avery, Jordan, Sam and Riley.</p>');
+    // No site.config.json, so hidden by default: the page and robots.txt say so.
+    writeFileSync(join(tree, 'public', 'index.html'), '<meta name="robots" content="noindex, nofollow"><h1>Homeroom</h1><p>Avery, Jordan, Sam and Riley.</p>');
+    writeFileSync(join(tree, 'public', 'robots.txt'), 'User-agent: *\nDisallow: /\n');
     const run = spawnSync(process.execPath, [CLI, '--root', tree], { encoding: 'utf8', env: { ...process.env, HOMEROOM_LOCAL_CONFIG: join(tmp, 'absent.json') } });
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, /no local config at .*pattern rules only/);
@@ -164,9 +169,82 @@ describe('no local config (CI)', () => {
   });
 });
 
+describe('indexing guard (issue #4): one flag decides', () => {
+  const NOINDEX = '<meta name="robots" content="noindex, nofollow">';
+  /** A throwaway site from { 'public/x.html': '...', 'site.config.json': '...' }. */
+  function site(name, files) {
+    const root = join(tmp, name);
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    }
+    return root;
+  }
+  const failing = (root, cfg) => indexFindings(root, cfg).map((f) => f.file.split(sep).join('/')).sort();
+
+  test('hidden: every page needs noindex and robots.txt needs Disallow: /', () => {
+    const root = site('hidden', {
+      'public/index.html': '<title>Home</title>',
+      'public/log/index.html': '<head><meta content="noindex" name="robots"></head>',
+      'public/robots.txt': 'User-agent: *\nDisallow: /mockups/\n',
+      'public/mockups/issue-9/index.html': '<p>pipeline-owned, covered by robots.txt</p>',
+    });
+    assert.deepEqual(failing(root, { public: false }), ['public/index.html', 'public/robots.txt']);
+  });
+
+  test('hidden: a fully hidden tree passes, and a missing robots.txt fails', () => {
+    const root = site('hidden-ok', { 'public/index.html': NOINDEX, 'public/robots.txt': '# staging\nUser-agent: *\nDisallow: /\n' });
+    assert.deepEqual(failing(root, { public: false }), []);
+    const bare = site('hidden-bare', { 'public/index.html': NOINDEX });
+    assert.deepEqual(failing(bare, { public: false }), ['public/robots.txt']);
+  });
+
+  test('public: pages may be indexable, but /mockups/ and the 404 stay hidden', () => {
+    const files = { 'public/index.html': '<title>Home</title>', 'public/mockups/index.html': NOINDEX };
+    const leaky = site('public-leaky', { ...files, 'public/404.html': '<title>Lost</title>', 'public/robots.txt': 'User-agent: *\nDisallow:\n' });
+    assert.deepEqual(failing(leaky, { public: true }), ['public/404.html', 'public/robots.txt']);
+    const ok = site('public-ok', { ...files, 'public/404.html': NOINDEX, 'public/robots.txt': 'User-agent: *\nDisallow: /mockups/\n' });
+    assert.deepEqual(failing(ok, { public: true }), []);
+  });
+
+  test('robots.txt: only rules under User-agent: * count', () => {
+    assert.deepEqual([...disallowedForAll('User-agent: Googlebot\nDisallow: /\n\nUser-agent: *\nDisallow: /mockups/ # gallery\n')], ['/mockups/']);
+    assert.deepEqual([...disallowedForAll('User-agent: Bingbot\nUser-agent: *\nDisallow: /\n')], ['/']);
+    assert.deepEqual([...disallowedForAll('User-agent: *\nAllow: /\n')], []);
+  });
+
+  test('noindex is found in any attribute order, and only on a robots meta', () => {
+    assert.ok(hasNoindex(`<META CONTENT='noindex' NAME='robots'>`));
+    assert.ok(!hasNoindex('<meta name="googlebot-news" content="noindex">'));
+    assert.ok(!hasNoindex('<meta name="description" content="noindex is a word">'));
+  });
+
+  test('site.config.json: missing means hidden; anything but a boolean "public" is an error', () => {
+    assert.deepEqual(loadSiteConfig(join(tmp, 'absent.config.json')), { public: false });
+    const bad = join(tmp, 'bad.config.json');
+    writeFileSync(bad, '{ "public": "yes" }');
+    assert.throws(() => loadSiteConfig(bad), /needs "public": true or false/);
+    writeFileSync(bad, '{ public: true');
+    assert.throws(() => loadSiteConfig(bad), /isn't valid JSON/);
+  });
+
+  test('the CLI fails with the file and the fix when the flag and the tree disagree', () => {
+    const root = site('cli-mismatch', { 'site.config.json': '{ "public": false }', 'public/index.html': '<h1>Homeroom</h1>', 'public/robots.txt': 'User-agent: *\nDisallow: /\n' });
+    const run = spawnSync(process.execPath, [CLI, '--root', root], { encoding: 'utf8', env: { ...process.env, HOMEROOM_LOCAL_CONFIG: join(tmp, 'absent.json') } });
+    assert.equal(run.status, 1);
+    assert.match(run.stdout, /says hidden/);
+    assert.match(run.stderr, /public\/index\.html {2}index: .*noindex/);
+    assert.match(run.stderr, /flip "public" in site\.config\.json/);
+  });
+});
+
 describe('the real tree', () => {
   test('passes, with the local deny-list too when this machine has one', () => {
     const findings = scanTree(ROOT, ctx(loadDenyList(vocabulary).terms));
     assert.deepEqual(findings.map(format), []);
+  });
+
+  test('matches its own site.config.json flag', () => {
+    assert.deepEqual(indexFindings(ROOT, loadSiteConfig()).map(format), []);
   });
 });
