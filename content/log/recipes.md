@@ -1,10 +1,10 @@
 ---
-title: Recipes, scaled the way a cookbook would
-date: 2026-11-02T04:39:24Z
-refs: [homeroom #85, homeroom #97]
-screenshot: /assets/log/recipes.png
-alt: A recipe on the sample household's wall: a corn and chicken bowl set to 6 servings, its ingredients doubled, a corrected cheese flagged, and a Watch button on the photo.
+title: Recipes that end in a grocery list
+date: 2026-11-02T18:20:31Z
+refs: [homeroom #85, homeroom #97, homeroom #87, homeroom #102]
+screenshot: /assets/log/shopping.png
+alt: The sample household's shopping list for next week on the wall: items sorted into aisle cards, lemon ticked as already in the fridge, light mayonnaise on its own line, and a Lock in button with 24 to buy.
 ---
-A recipe shared from a phone now lands in a recipe box on the wall, and the servings stepper rescales it the way a cookbook would: 0.33 cup reads ⅓ cup, and 2–3 cloves, doubled, reads 4–6 cloves.
-Reading a recipe off a video can go wrong, so anything the AI corrected or guessed is flagged for you to keep or discard, and Discard has a short Undo.
-Watch plays the original video full screen with a jump list of steps, and if the recipe drive is unplugged, the text and thumbnails still show.
+A recipe shared from a phone lands in a recipe box on the wall, scaled the way a cookbook would, with anything the AI guessed flagged for you to keep or discard.
+The week's plan then becomes one shopping list, grouped by aisle, and only identical items merge, so light mayonnaise stays apart from mayonnaise.
+Lock in sends it to the shared Groceries list, so it's on both phones, and a midweek swap sends only the new lines.
