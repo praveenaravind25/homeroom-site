@@ -7,7 +7,7 @@
  * Writes public/shots/<name>.png (each exactly 1263×841) and public/shots/manifest.json
  * ({ "sha": … }, nothing else).
  *
- *   npm run shots -- --only recipes   a build-log image (LOG_SCREENS): public/assets/log/<name>.png,
+ *   npm run shots -- --only shopping  a build-log image (LOG_SCREENS): public/assets/log/<name>.png,
  *                                     its product SHA recorded in public/assets/log/manifest.json.
  *                                     Never part of a default run: a log entry's image is pinned to
  *                                     the merge it describes, so it doesn't follow main.
@@ -221,28 +221,25 @@ const SCREENS = {
 
 /**
  * Build-log images (content/log/README.md): same capture and checks, written to public/assets/log/.
- * The recipe is the sample box's corn bowl, reached as the product's e2e does (e2e/recipes.spec.ts),
- * then stepped to 6 servings (2× the recipe's 3) so the shot shows the rescale (⅔ cup, 4–6 cloves).
+ * Each screen is reached as the product's own e2e reaches it, against the sample-data build.
  */
 const LOG_SCREENS = {
-  recipes: async (page) => {
-    const bowl = 'r-5a3c1e0b9d';
+  // #87 (product PR #102): the fake box's sample next week as one Shopping list, as the product's
+  // e2e/shopping.spec.ts reaches it. Meals → Next week → Shopping list: aisle cards, light
+  // mayonnaise on its own line (only identical items merge), and "Lock in · N to buy".
+  shopping: async (page) => {
     await nav(page, 'meals');
-    await page.locator('[data-recipe-box-entry]').click();
-    await page.locator(`[data-shelf="new"] [data-recipe-card="${bowl}"]`).click();
-    await page.locator(`[data-screen="recipe"][data-recipe="${bowl}"]`).waitFor();
-    await page.locator('[data-review-line]').waitFor();
-    await page.locator('[data-watch]').waitFor();
-    // The wall opens at its own serving count, not the recipe's: step until it reads 6 (2× the recipe's 3).
-    const servings = page.locator('[data-servings]');
-    for (let i = 0; i < 12 && (await servings.textContent())?.trim() !== '6'; i++) await page.locator('[data-servings-up]').click();
-    await page.locator('[data-ingredient="garlic"] [data-qty]').filter({ hasText: /^4–6 cloves$/ }).waitFor();
-    // The hero comes off the (temp) drive through the media route: wait until it has pixels.
-    await page.waitForFunction(() => document.querySelector('[data-hero] img')?.naturalWidth > 0);
-    await page.mouse.move(0, 0); // no hover state left on the stepper
-    // A stepper click can nudge the left column's scroll (it scrolls a few px rather than clip):
-    // rest every scroller on the screen at the top, so the hero is whole and the shot repeats.
-    await page.locator('[data-screen="recipe"]').evaluate((root) => {
+    await page.locator('[data-week="next"]').click();
+    await page.locator('[data-shopping-entry]').click();
+    await page.locator('[data-screen="shopping"][data-step="shop"]').waitFor();
+    await page.locator('[data-aisle]').first().waitFor();
+    await page.locator('[data-line="light mayonnaise"]').waitFor();
+    await page.locator('[data-to-lock]').filter({ hasText: /\d+ to buy/ }).waitFor();
+    // One line ticked "we have it", so the list reads as something you work through.
+    await page.locator('[data-line="lemon"]').click();
+    await page.locator('[data-line="lemon"][aria-pressed="true"]').waitFor();
+    await page.mouse.move(0, 0); // no hover state left on the line
+    await page.locator('[data-screen="shopping"]').evaluate((root) => {
       for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
     });
   },
