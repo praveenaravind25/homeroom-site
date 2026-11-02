@@ -1,6 +1,14 @@
 {
- "generated": "2026-11-01",
+ "generated": "2026-11-02",
  "mockups": [
+  {
+   "slug": "issue-87",
+   "title": "Recipes \u00b7 Weekly shopping list \u2192 HA Shopping list, lock the week",
+   "ref": "Product #87",
+   "date": "2026-11-02",
+   "thumb": "delta-sheet.png",
+   "shots": 9
+  },
   {
    "slug": "site-issue-1",
    "title": "Showcase \u00b7 Landing page: what, who, why, how it's built",

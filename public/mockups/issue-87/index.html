@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1263,initial-scale=1">
+<title>Homeroom · #87 Shopping list → Lock in · design direction</title>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<style>
+/* Mockup only. Values mirror app/src/styles/tokens.css (v0.17); Dev builds with the tokens, never these literals. */
+:root{
+  --c-chalk:#F7F4EE; --c-rail-soft:#CFC8BB; --c-mute:#8F887D; --c-brass:#EDC67C;
+  --c-rail-ground:#12100E; --c-s1:#1C1916; --c-s2:#25211D; --c-s3:#2F2A25; --c-rail-hair:rgb(247 244 238 / .1);
+  --c-ground:#0A0908; --c-sheet-scrim:rgb(8 7 6 / .55); --shadow-sheet:0 20px 60px rgb(0 0 0 / .5); --shadow-toast:0 14px 40px rgb(0 0 0 / .45);
+  --c-person-1:#D49A86; --c-person-2:#86B6A6; --c-person-3:#AFA0D6; --c-person-4:#B3BC85;
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --rail-fs-label:13px; --rail-fs-meta:14px; --rail-fs-body:16px; --rail-fs-item:19px; --rail-fs-heading:24px; --rail-fs-title:28px;
+  --tracking-rail-label:.14em;
+  --r-card:22px; --r-tile:16px; --r-pill:999px; --r-chip:10px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1); --ease-out:cubic-bezier(.4,0,.2,1);
+  --dur-rise:520ms; --dur-leave:280ms; --dur-press:180ms; --dur-fill:180ms; --dur-tick:260ms; --dur-sheet:420ms; --dur-scrim:380ms;
+  --dur-toast-in:320ms; --dur-pin:420ms; --dur-progress:520ms; --dur-nudge:360ms;
+  --rail-rise-from:translateY(16px); --tick-travel:10px; --press-scale:.97; --sheet-from:translateX(40px);
+  --toast-from:translateY(16px); --pin-from:scale(.3);
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+  --dur-send-line:110ms; /* NEW (proposed): one ticket line rolling up while the list goes out */
+}
+@media (prefers-reduced-motion:reduce){:root{--rail-rise-from:none;--press-scale:1;--tick-travel:0px;--sheet-from:none;--toast-from:none;--pin-from:none;--dur-progress:0ms;--dur-send-line:0ms}}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;font-family:var(--font);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:12px}
+#hub{position:relative;width:1263px;height:841px;overflow:hidden;background:var(--c-rail-ground);color:var(--c-chalk);user-select:none;margin:0 auto}
+.abs{position:absolute}
+.row{display:flex;align-items:center;gap:12px} .col{display:flex;flex-direction:column;gap:12px;min-height:0}
+.lab{font-size:var(--rail-fs-label);letter-spacing:var(--tracking-rail-label);font-weight:650;color:var(--c-mute);text-transform:uppercase}
+.card{background:var(--c-s1);border-radius:var(--r-card);padding:20px 22px;min-height:0}
+.scroll{overflow-y:auto;-webkit-mask-image:linear-gradient(#000 calc(100% - 28px),transparent);mask-image:linear-gradient(#000 calc(100% - 28px),transparent);padding-bottom:20px;scrollbar-width:none} .scroll::-webkit-scrollbar{display:none}
+
+/* motion: opacity always paired with a transform */
+@keyframes rise{from{opacity:0;transform:var(--rail-rise-from)}to{opacity:1;transform:none}}
+@keyframes sheet{from{opacity:0;transform:var(--sheet-from)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes toast{from{opacity:0;transform:var(--toast-from)}to{opacity:1;transform:none}}
+@keyframes pin{from{transform:var(--pin-from)}to{transform:none}}
+@keyframes tickin{from{opacity:0;transform:translateY(var(--tick-travel))}to{opacity:1;transform:none}}
+@keyframes nudge{0%,100%{transform:none}35%{transform:translateX(6px)}70%{transform:translateX(-3px)}}
+.rise{animation:rise var(--dur-rise) var(--ease-settle) both}
+.tick{display:inline-block;animation:tickin var(--dur-tick) var(--ease-settle) both}
+.calm .rise{animation:none}
+
+/* shell */
+.nav{width:84px;padding:10px 0;border-radius:var(--r-tile);display:flex;flex-direction:column;align-items:center;gap:6px;font-size:var(--rail-fs-label);font-weight:600;color:var(--c-rail-soft)}
+.nav.on{background:var(--c-s2);color:var(--c-chalk)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:var(--r-pill);background:var(--c-s2);font-size:var(--rail-fs-body);font-weight:600;min-height:48px;white-space:nowrap;transition:transform var(--dur-press) var(--ease-press)}
+.btn:active,.pill:active,.stp:active{transform:scale(var(--press-scale))}
+.item:active .chk{transform:scale(.88)}
+.btn.pri{background:var(--c-chalk);color:var(--c-rail-ground)}
+.btn.big{min-height:64px;padding:0 30px;font-size:var(--rail-fs-item)}
+.icn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--r-pill);background:var(--c-s2);position:relative}
+.av{width:34px;height:34px;border-radius:99px;color:var(--c-rail-ground);font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center}
+.stp{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:650;color:var(--c-mute);min-height:44px}
+.stp b{width:26px;height:26px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;background:var(--c-s2);font-size:13px}
+.stp.on{color:var(--c-chalk)} .stp.on b{background:var(--c-chalk);color:var(--c-rail-ground)}
+.stp.done{color:var(--c-rail-soft)} .stp.done b{background:var(--c-rail-soft);color:var(--c-rail-ground)}
+
+/* shopping list */
+.aisle{padding:14px 20px 6px}
+.aisle>.lab{display:flex;justify-content:space-between;margin-bottom:2px}
+.item{display:flex;align-items:center;gap:14px;width:100%;padding:7px 0;min-height:50px;border-top:1px solid var(--c-rail-hair)}
+.aisle>.lab+.item{border-top:0}
+.chk{position:relative;width:28px;height:28px;border-radius:99px;box-shadow:inset 0 0 0 2px var(--c-s3);flex:none;transition:transform var(--dur-press) var(--ease-press)}
+.chk i{position:absolute;inset:0;border-radius:99px;background:var(--c-rail-soft);display:flex;align-items:center;justify-content:center;color:var(--c-rail-ground);opacity:0;transform:scale(.6);transition:opacity var(--dur-fill) var(--ease-out),transform var(--dur-pin) var(--ease-press)}
+.item.have .chk i{opacity:1;transform:none}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:18px;font-weight:550;line-height:1.2}
+.nm small{display:block;font-size:var(--rail-fs-label);color:var(--c-mute);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{font-size:var(--rail-fs-body);color:var(--c-rail-soft);white-space:nowrap;font-weight:550}
+.item.have .nm b,.item.have .qty{color:var(--c-mute)}
+.stap .chk::after{content:"+";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--c-rail-soft);font-size:19px;font-weight:600;line-height:1}
+.stap.inc .chk::after{content:""}
+.stap.inc .chk i{opacity:1;transform:none;background:var(--c-chalk)}
+.stap:not(.inc) .nm b{color:var(--c-rail-soft)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:0 16px;border-radius:var(--r-pill);background:var(--c-s2);font-size:15px;font-weight:600;min-height:44px;white-space:nowrap;transition:transform var(--dur-press) var(--ease-press)}
+.pill.on{background:var(--c-chalk);color:var(--c-rail-ground)}
+.pill.ghost{background:none;box-shadow:inset 0 0 0 2px var(--c-s2);color:var(--c-rail-soft)}
+.staprow{animation:rise var(--dur-rise) var(--ease-settle) both}
+.dock{background:var(--c-s1);border-radius:var(--r-card);padding:14px 14px 14px 22px}
+
+/* the count: the one big number on the screen, an odometer */
+.count{font-size:64px;font-weight:700;letter-spacing:-.03em;line-height:1;display:inline-flex;overflow:hidden}
+.count+span{font-size:22px;font-weight:600;color:var(--c-rail-soft)}
+
+/* lock in */
+.meal{display:flex;gap:14px;align-items:center;margin-top:12px}
+.meal img{width:60px;height:60px;border-radius:12px;object-fit:cover;flex:none;background:var(--c-s3)}
+.ticket{position:relative;height:222px;overflow:hidden;border-radius:var(--r-tile);background:var(--c-s2);padding:2px 18px}
+.ticket .ln{display:flex;align-items:center;gap:12px;height:36px;font-size:15px;color:var(--c-rail-soft);border-bottom:1px solid var(--c-rail-hair);white-space:nowrap}
+.ticket .ln::before{content:"";width:16px;height:16px;border-radius:99px;box-shadow:inset 0 0 0 1.5px var(--c-rail-soft);flex:none;opacity:.6}
+.ticket{-webkit-mask-image:linear-gradient(transparent,#000 22px,#000 calc(100% - 46px),transparent);mask-image:linear-gradient(transparent,#000 22px,#000 calc(100% - 46px),transparent)}
+.ticket .ln.sent{color:var(--c-mute)}
+.ticket .ln.sent::before{background:var(--c-rail-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2325211D' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/12px no-repeat;box-shadow:none;opacity:1}
+.roll{transition:transform var(--dur-send-line) var(--ease-settle)}
+.fuse{height:3px;border-radius:3px;background:var(--c-s3);overflow:hidden}
+.fuse i{display:block;height:100%;background:var(--c-chalk);transform-origin:0 0;transform:scaleX(0);transition:transform var(--dur-send-line) linear}
+.mark{width:68px;height:68px;border-radius:99px;background:var(--c-chalk);color:var(--c-rail-ground);display:inline-flex;align-items:center;justify-content:center;animation:pin var(--dur-pin) var(--ease-press) both}
+.landed>*{animation:rise var(--dur-rise) var(--ease-settle) both}
+.landed>*:nth-child(2){animation-delay:80ms} .landed>*:nth-child(3){animation-delay:140ms}
+.nudge{animation:nudge var(--dur-nudge) var(--ease-out)}
+.dot{width:10px;height:10px;border-radius:99px;background:var(--c-brass);display:inline-block;flex:none}
+
+/* meals grid */
+.grid{display:grid;grid-template-columns:106px repeat(7,minmax(0,1fr));grid-template-rows:52px 76px minmax(0,1fr) minmax(0,1fr);min-height:0;gap:10px;position:relative}
+.dh{display:flex;flex-direction:column;justify-content:flex-end;padding:0 6px 4px;font-size:var(--rail-fs-label);color:var(--c-mute);font-weight:650;letter-spacing:var(--tracking-rail-label);text-transform:uppercase}
+.dh b{font-size:24px;color:var(--c-chalk);letter-spacing:-.01em;font-weight:650;text-transform:none;line-height:1.1}
+.dh.today,.dh.today b{color:var(--c-brass)}
+.rh{display:flex;align-items:center;font-size:var(--rail-fs-label);color:var(--c-mute);font-weight:650;letter-spacing:var(--tracking-rail-label);text-transform:uppercase}
+.blk{border-radius:var(--r-tile);background:var(--c-s1);overflow:hidden;display:flex;flex-direction:column;min-height:0;position:relative}
+.blk img{width:100%;flex:1;min-height:0;object-fit:cover;display:block}
+.blk>span{padding:10px 14px 12px;font-size:var(--rail-fs-body);font-weight:650;line-height:1.2}
+.blk>span small{display:block;font-size:var(--rail-fs-label);font-weight:500;color:var(--c-mute);margin-top:3px}
+.free{border-radius:var(--r-tile);box-shadow:inset 0 0 0 2px var(--c-s2);display:flex;align-items:center;justify-content:center;color:var(--c-mute);font-size:15px;font-weight:600}
+.flag{position:absolute;top:10px;left:10px;font-size:12px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:99px;background:var(--c-brass);color:var(--c-rail-ground)}
+
+/* sheet + toast */
+.scrim{position:absolute;inset:0;background:var(--c-sheet-scrim);animation:fade var(--dur-scrim) var(--ease-out) both;z-index:20}
+.sheet{position:absolute;top:16px;right:16px;bottom:16px;width:500px;background:var(--c-s1);border-radius:var(--r-card);box-shadow:var(--shadow-sheet);padding:28px;z-index:21;display:flex;flex-direction:column;gap:18px;animation:sheet var(--dur-sheet) var(--ease-settle) both}
+.toast{position:absolute;left:104px;right:0;top:28px;display:flex;justify-content:center;z-index:30;pointer-events:none}
+.toast div{background:var(--c-chalk);color:var(--c-rail-ground);padding:12px 22px;border-radius:var(--r-pill);font-size:var(--rail-fs-body);font-weight:600;box-shadow:var(--shadow-toast);display:flex;gap:10px;align-items:center;animation:toast var(--dur-toast-in) var(--ease-settle) 300ms both;white-space:nowrap}
+
+/* state switcher: only with ?nav (kept out of the screenshots) */
+#sw{display:none;position:fixed;left:8px;bottom:8px;z-index:99;gap:4px;flex-wrap:wrap;max-width:1240px}
+.nav-on #sw{display:flex}
+#sw a{font:600 12px var(--font);color:#111;background:#E0DACE;padding:6px 9px;border-radius:7px;text-decoration:none}
+#sw a.on{background:#EDC67C}
+</style></head>
+<body>
+<div id="hub"></div>
+<nav id="sw"></nav>
+<script>
+const P = {
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  week:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  meals:'<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8a2 2 0 0 1-2 2M17 21V3c-2.5 1.5-3 5-3 8h3"/>',
+  list:'<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  chores:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>',
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  cam:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', chev:'<path d="M9 6l6 6-6 6"/>', back:'<path d="M15 6l-6 6 6 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>', bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>', retry:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>'
+};
+const I = (n,s=22,w=2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const PIC = {oats:1080, bowl:292, pan:429, fry:102, salmon:312, frame:1015};
+const pic = (seed,w=400,h=300) => `https://picsum.photos/id/${PIC[seed]}/${w}/${h}`;
+
+// ---- sample data: a placeholder household and placeholder dishes ----
+const DISHES = [
+  {k:'oats', t:'Overnight oats', m:'Breakfast', d:'Mon–Fri', p:10},
+  {k:'bowl', t:'Black bean bowls', m:'Lunch', d:'Mon–Fri · cook Sun', p:10},
+  {k:'pan',  t:'Sheet-pan chicken & veg', m:'Dinner', d:'Mon–Wed · cook Mon', p:12},
+  {k:'fry',  t:'Beef & broccoli stir-fry', m:'Dinner', d:'Thu–Sat · cook Thu', p:12},
+];
+const AISLES = ['Produce','Meat & seafood','Dairy & eggs','Bakery','Pantry','Frozen','Other'];
+// [item, qty, aisle, merge receipt]
+const LIST = [
+  ['Broccoli','2 heads','Produce','1 + 1 · Sheet-pan + Stir-fry'],
+  ['Red bell peppers','3','Produce'],
+  ['Carrots','4','Produce'],
+  ['Garlic','6 cloves','Produce','2 + 4 · Stir-fry + Bowls'],
+  ['Limes','3','Produce'],
+  ['Avocados','2','Produce'],
+  ['Cilantro','1 bunch','Produce'],
+  ['Berries','1½ cups','Produce'],
+  ['Chicken thighs','750 g','Meat & seafood','250 g + 0.5 kg · Bowls + Sheet-pan'],
+  ['Flank steak','1½ lb','Meat & seafood'],
+  ['Greek yogurt','2 cups','Dairy & eggs'],
+  ['Milk','1 qt','Dairy & eggs'],
+  ['Sour cream','1 cup','Dairy & eggs'],
+  ['Mayonnaise','½ cup','Dairy & eggs'],
+  ['Light mayonnaise','¼ cup','Dairy & eggs','Not merged with mayonnaise'],
+  ['Tortillas','10','Bakery'],
+  ['Black beans','2 cans','Pantry'],
+  ['Jasmine rice','3 cups','Pantry'],
+  ['Rolled oats','2 cups','Pantry'],
+  ['Chia seeds','2 tbsp','Pantry'],
+  ['Corn','1 bag','Frozen'],
+];
+// the aisle set is fixed (config-overridable); columns balance by row count
+const COLS = [['Produce'],['Meat & seafood','Dairy & eggs','Bakery'],['Pantry','Frozen','Other']];
+const STAPLES = ['Salt & pepper','Olive oil','Soy sauce','Garlic powder','Paprika','Cumin','Honey','Brown sugar'];
+const USUAL = ['Coffee','Bananas','Eggs','Paper towels','Dish soap'];
+const DELTA = [['Salmon fillets','1½ lb','Meat & seafood'],['Green beans','1 lb','Produce'],['Lemons','2','Produce']];
+
+const S = {have:{'Rolled oats':1,'Milk':1,'Jasmine rice':1}, usual:{'Coffee':1,'Bananas':1}, inc:{'Soy sauce':1}, staplesOpen:false};
+const lines = () => {
+  const out = LIST.map(([n,q,a,f])=>({n,q,a,f}));
+  STAPLES.forEach(n=>{ if (S.inc[n]) out.push({n,q:'',a:'Pantry',f:'Pantry staple'}); });
+  USUAL.forEach(n=>{ if (S.usual[n]) out.push({n,q:'',a:'Other',f:'Usually buy'}); });
+  return out;
+};
+const toBuy = () => lines().filter(x=>!S.have[x.n]);
+const haText = x => `${x.n}${x.q?', '+x.q:''}`;
+
+// ---- shell ----
+const RAIL = [['cal','Today'],['week','Week'],['meals','Meals'],['list','Lists'],['chores','Chores'],['home','Home'],['cam','Cameras']];
+function shell(title, sub, right, body){
+  return `<nav class="abs" aria-label="Screens" style="left:0;top:0;bottom:0;width:104px;box-shadow:1px 0 0 var(--c-rail-hair);display:flex;flex-direction:column;align-items:center;padding:20px 0 16px;gap:4px">
+      ${RAIL.map(([ic,l])=>`<button class="nav ${l==='Meals'?'on':''}" ${l==='Meals'?'aria-current="page"':''}>${I(ic,24)}${l}</button>`).join('')}
+      <div style="flex:1"></div>
+      <button class="nav" style="padding:6px 0"><img src="${pic('frame',144,96)}" alt="" style="width:72px;height:48px;border-radius:10px;object-fit:cover">Photos</button>
+    </nav>
+    <header class="abs rise" style="left:128px;right:24px;top:20px;height:60px;display:flex;align-items:center;gap:14px">
+      <div><div style="font-size:var(--rail-fs-title);font-weight:650;letter-spacing:-.01em;line-height:1.15">${title}</div><div style="font-size:15px;color:var(--c-rail-soft)">${sub}</div></div>
+      <div style="flex:1"></div>${right}
+    </header>
+    <main class="abs" style="left:128px;top:100px;width:1111px;height:717px">${body}</main>`;
+}
+const homeRight = () => `<span class="row" style="gap:6px">${[1,2,3,4].map(s=>`<span class="av" style="${s===4?'box-shadow:inset 0 0 0 2px var(--c-person-4);color:var(--c-person-4)':'background:var(--c-person-'+s+')'}">${'AJSR'[s-1]}</span>`).join('')}</span><span class="icn">${I('bell',22)}</span><button class="btn pri">${I('plus',20)}Add</button>`;
+function stepper(at){
+  const st=[['Pick meals','shop'],['Shopping list','shop'],['Lock in','lock']];
+  return `<div class="row" style="gap:12px">${st.map(([l,h],i)=>`<button class="stp ${i===at?'on':i<at?'done':''}" onclick="go('${h}')"><b>${i<at?I('check',14,3):i+1}</b>${l}</button>`).join('<span style="color:var(--c-s3)">—</span>')}</div><button class="btn" style="margin-left:14px">Close</button>`;
+}
+const D = i => `style="animation-delay:${i*50}ms"`;
+
+// ---- 2 · Shopping list ----
+function shop(){
+  const L = lines(), by = {};
+  L.forEach(x=>(by[x.a] ||= []).push(x));
+  const n = toBuy().length, had = Object.values(S.have).filter(Boolean).length;
+  const row = x => `<button class="item ${S.have[x.n]?'have':''}" onclick="have('${x.n}')" aria-pressed="${!!S.have[x.n]}">
+      <span class="chk"><i>${I('check',16,3)}</i></span>
+      <span class="nm"><b>${x.n}</b>${S.have[x.n]?'<small>We have it</small>':x.f?`<small>${x.f}</small>`:''}</span>
+      <span class="qty">${x.q}</span></button>`;
+  const stapleRow = S.staplesOpen ? `<div class="row staprow" style="gap:8px;padding-bottom:12px;margin-bottom:2px;border-bottom:1px solid var(--c-rail-hair)" aria-label="Pantry staples in these recipes">${STAPLES.map(s=>`<button class="pill ${S.inc[s]?'on':'ghost'}" style="padding:0 14px" onclick="inc('${s}')" aria-pressed="${!!S.inc[s]}">${S.inc[s]?I('check',16,3):I('plus',16)}${s}</button>`).join('')}</div>` : '';
+  const stapleCard = '';
+  const body = `<div class="col" style="height:717px;gap:14px">
+    <div class="row rise" style="font-size:var(--rail-fs-body);color:var(--c-rail-soft);min-height:24px;padding:0 4px">
+      <span style="flex:1">4 dishes, scaled to 44 portions · <b style="color:var(--c-chalk);font-weight:600">tap what you already have</b></span>
+      <span>${had} we have · ${n} to buy</span></div>
+    <div class="scroll rise" style="flex:1;display:flex;gap:16px;align-items:flex-start;animation-delay:50ms">
+      ${COLS.map(c=>`<div class="col" style="flex:1;gap:16px">${c.filter(a=>by[a]).map(a=>`<div class="card aisle"><div class="lab"><span>${a}</span><span>${by[a].filter(x=>!S.have[x.n]).length}</span></div>${by[a].map(row).join('')}</div>`).join('')}</div>`).join('')}
+    </div>
+    <div class="dock rise col" style="gap:12px;animation-delay:100ms">${stapleRow}<div class="row" style="gap:10px">
+      <span class="lab" style="width:112px;white-space:nowrap">Usually buy</span>${USUAL.slice(0,4).map(u=>`<button class="pill ${S.usual[u]?'on':''}" onclick="usual('${u}')" aria-pressed="${!!S.usual[u]}">${S.usual[u]?I('check',16,3):I('plus',16)}${u}</button>`).join('')}
+      <button class="pill ghost" onclick="staples()" aria-expanded="${S.staplesOpen}">${S.staplesOpen?'Hide staples':'Staples · '+STAPLES.filter(s=>!S.inc[s]).length+' hidden'}</button>
+      <div style="flex:1"></div>
+      <button class="btn pri big" onclick="go('lock')"><span>Lock in · <span class="tick" id="n">${n}</span> to buy</span>${I('chev',20)}</button>
+    </div></div></div>`;
+  return shell('Plan Nov 2–8','Next week · shopping list', stepper(1), body);
+}
+
+// ---- 3 · Lock in (+ sending / failed) ----
+function lock(mode){
+  const T = toBuy(), n = T.length;
+  const meals = ['Breakfast','Lunch','Dinner'].map((m,i)=>`<div class="card rise" ${D(i)}><span class="lab">${m}</span>${DISHES.filter(d=>d.m===m).map(d=>`<div class="meal"><img src="${pic(d.k,120,120)}" alt=""><div style="flex:1"><div style="font-size:18px;font-weight:650">${d.t}</div><div style="font-size:var(--rail-fs-meta);color:var(--c-rail-soft);margin-top:3px">${d.d} · ${d.p} portions</div></div></div>`).join('')}</div>`).join('');
+  const sentN = mode==='sending' ? 9 : 0;
+  let right;
+  if (mode==='sent') right = `<div class="card"><div class="col landed" style="align-items:center;gap:14px;padding:64px 0;text-align:center"><span class="mark">${I('check',34,3)}</span><div style="font-size:var(--rail-fs-heading);font-weight:650">On both phones</div><div style="font-size:var(--rail-fs-body);color:var(--c-rail-soft)">${n} items, by aisle</div></div></div>`;
+  else if (mode==='failed') right = `
+    <div class="card col nudge" style="gap:16px;padding:26px;box-shadow:inset 0 0 0 2px var(--c-brass)">
+      <div class="row" style="gap:10px"><span class="dot"></span><span class="lab" style="color:var(--c-brass)">Not sent yet</span></div>
+      <div style="font-size:var(--rail-fs-heading);font-weight:650;line-height:1.25">Home Assistant didn’t answer.</div>
+      <div style="font-size:var(--rail-fs-body);color:var(--c-rail-soft);line-height:1.5">Your list is safe: all ${n} items, just as you left them. The week stays a draft until the list lands.</div>
+      <div class="ticket" style="height:112px"><div class="roll">${T.slice(9).map(x=>`<div class="ln">${haText(x)}</div>`).join('')}</div></div>
+      <button class="btn pri big" onclick="go('sending')">${I('retry',22)}Try again</button>
+      <div style="font-size:var(--rail-fs-meta);color:var(--c-rail-soft);line-height:1.45">9 items made it before it stopped. Trying again won’t add them twice.</div>
+    </div>`;
+  else right = `
+    <div class="card col" style="gap:16px;padding:26px">
+      <div class="lab">${mode==='sending'?'Sending':'Shopping list'}</div>
+      <div class="row" style="align-items:baseline;gap:10px"><span class="count"><span class="tick">${n-sentN}</span></span><span>${mode==='sending'?'to go':'items'}</span></div>
+      <div class="ticket" aria-label="How the items read on your phones">
+        <div class="roll" style="transform:translateY(-${Math.max(0,sentN-2)*37}px)">${T.map((x,i)=>`<div class="ln ${i<sentN?'sent':''}">${haText(x)}</div>`).join('')}</div>
+      </div>
+      <div class="fuse" ${mode==='sending'?'':'style="visibility:hidden"'}><i style="transform:scaleX(${sentN/n})"></i></div>
+      ${mode==='sending'
+        ? `<button class="btn big" disabled aria-busy="true">${I('phone',22)}Sending to both phones</button>`
+        : `<button class="btn pri big" onclick="go('sending')">${I('lock',22)}Lock week & send list</button>`}
+      <div style="font-size:var(--rail-fs-meta);color:var(--c-rail-soft);line-height:1.45">Lands in <b style="color:var(--c-chalk);font-weight:600">Shopping list</b> in Home Assistant, by aisle, worded exactly like this.</div>
+    </div>`;
+  const body = `<div style="display:grid;grid-template-columns:1fr 440px;gap:20px;height:717px">
+    <div class="col scroll" style="gap:12px">${meals}
+      <div class="rise" ${D(3)}><div style="font-size:15px;color:var(--c-rail-soft);padding:2px 6px">Free: Sat lunch, all of Sunday. Decide on the day.</div></div></div>
+    <div class="col rise" ${D(1)} style="gap:16px">${right}
+      ${mode==='sending'||mode==='sent'?'':`<button class="btn" onclick="go('shop')" style="align-self:flex-start">${I('back',20)}Shopping list</button>`}</div></div>`;
+  return shell('Plan Nov 2–8','Next week · lock in', stepper(2), body);
+}
+
+// ---- Meals after lock, and the midweek delta ----
+function meals(delta){
+  const days = ['Mon 2','Tue 3','Wed 4','Thu 5','Fri 6','Sat 7','Sun 8'];
+  const today = delta ? 2 : -1;
+  const head = days.map((d,i)=>{const [w,n]=d.split(' ');return `<div class="dh ${i===today?'today':''}" style="grid-column:${i+2};grid-row:1">${i===today?'Today':w}<b>${n}</b></div>`}).join('');
+  const blk = (col,span,row,seed,t,sub,flag) => `<div class="blk" style="grid-column:${col}/${col+span};grid-row:${row}">${flag?`<em class="flag" style="font-style:normal">${flag}</em>`:''}<img src="${pic(seed,500,300)}" alt=""><span>${t}<small>${sub}</small></span></div>`;
+  const bf = `<div class="rh" style="grid-column:1;grid-row:2">Breakfast</div><div class="blk" style="grid-column:2/7;grid-row:2;flex-direction:row;align-items:center"><img src="${pic('oats',200,120)}" alt="" style="width:120px;flex:none;height:100%"><span>Overnight oats<small>Mon–Fri · 10 portions</small></span></div><div class="free" style="grid-column:7/9;grid-row:2">Free</div>`;
+  const lunch = `<div class="rh" style="grid-column:1;grid-row:3">Lunch</div>${blk(2,5,3,'bowl','Black bean bowls','Cook Sun · 10 portions')}<div class="free" style="grid-column:7/9;grid-row:3">Free</div>`;
+  const dinner = `<div class="rh" style="grid-column:1;grid-row:4">Dinner</div>${blk(2,3,4,'pan','Sheet-pan chicken & veg','Cook Mon · 12 portions')}${delta?blk(5,3,4,'salmon','Salmon & green beans','Cook Thu · 12 portions','3 to buy'):blk(5,3,4,'fry','Beef & broccoli stir-fry','Cook Thu · 12 portions')}<div class="free" style="grid-column:8/9;grid-row:4">Free</div>`;
+  const ring = '';
+  const banner = delta
+    ? `<div class="card rise row" style="padding:12px 14px 12px 24px;gap:16px;flex:none">
+        <span class="dot"></span>
+        <div style="flex:1"><div style="font-size:var(--rail-fs-item);font-weight:650;color:var(--c-brass)">3 items added since shopping</div>
+        <div style="font-size:var(--rail-fs-meta);color:var(--c-rail-soft);margin-top:3px">Thursday’s swap to Salmon & green beans needs salmon, green beans and lemons.</div></div>
+        <button class="btn pri" onclick="go('delta-sheet')">Send 3 to phones ${I('chev',18)}</button></div>`
+    : `<div class="card rise row" style="padding:12px 14px 12px 24px;gap:14px;flex:none">
+        <span style="color:var(--c-rail-soft);display:inline-flex">${I('lock',20)}</span>
+        <div style="flex:1;font-size:var(--rail-fs-body);color:var(--c-rail-soft)">Nov 2–8 is locked. <b style="color:var(--c-chalk);font-weight:600">${toBuy().length} items</b> are on Shopping list, on both phones.</div>
+        <button class="btn">Edit plan</button></div>`;
+  const body = `<div class="col" style="height:717px;gap:16px">${banner}
+    <div class="grid rise" ${D(1)} style="flex:1">${head}${bf}${lunch}${dinner}${ring}</div></div>`;
+  let html = shell('Meals', delta ? 'This week · Nov 2–8 · locked' : 'Next week · Nov 2–8 · locked', homeRight(), body);
+  if (!delta) html += `<div class="toast" role="status"><div>${I('check',18,3)}Week locked · ${toBuy().length} items on Shopping list</div></div>`;
+  return html;
+}
+function deltaSheet(){
+  return meals(true) + `<div class="scrim" onclick="go('delta')"></div>
+   <aside class="sheet" role="dialog" aria-label="Items added since shopping">
+     <div class="row" style="align-items:flex-start"><div style="flex:1"><div class="lab" style="color:var(--c-brass)">Added since shopping</div><div style="font-size:var(--rail-fs-heading);font-weight:650;margin-top:6px">Thursday needs 3 more things</div></div><button class="icn" onclick="go('delta')" aria-label="Close">${I('x',20)}</button></div>
+     <div class="card" style="background:var(--c-s2);padding:4px 20px">${DELTA.map(([n,q,a],i)=>`<button class="item" ${i?'':'style="border-top:0"'}><span class="chk"><i>${I('check',16,3)}</i></span><span class="nm"><b>${n}</b><small>${a} · Salmon & green beans</small></span><span class="qty">${q}</span></button>`).join('')}</div>
+     <div style="font-size:var(--rail-fs-body);color:var(--c-rail-soft);line-height:1.5">Only these three go out. Saturday’s shop stays as it was. Tap anything you already have.</div>
+     <div style="flex:1"></div>
+     <button class="btn pri big" onclick="go('delta')">${I('phone',22)}Send 3 to Shopping list</button>
+   </aside>`;
+}
+
+// ---- router + interactions ----
+const STATES = {shop:()=>{S.staplesOpen=false;return shop()}, staples:()=>{S.staplesOpen=true;return shop()}, lock:()=>lock(), sending:()=>lock('sending'), sent:()=>lock('sent'), failed:()=>lock('failed'), locked:()=>meals(false), delta:()=>meals(true), 'delta-sheet':deltaSheet};
+let timer;
+function render(st){
+  clearTimeout(timer);
+  const h = document.getElementById('hub');
+  h.classList.remove('calm'); h.innerHTML = (STATES[st]||STATES.shop)();
+  document.querySelectorAll('#sw a').forEach(a=>a.classList.toggle('on',a.hash==='#'+st));
+  if (st==='sending' && !/still/.test(location.search)) runSend();
+}
+function go(st){ if (location.hash==='#'+st) render(st); else location.hash = st; }
+// in-place updates: no re-rise, the scroll position kept, the count ticks
+function patch(){ const h=document.getElementById('hub'), s=h.querySelector('.scroll'), y=s?s.scrollTop:0; h.classList.add('calm'); h.innerHTML = shop(); const s2=h.querySelector('.scroll'); if(s2) s2.scrollTop=y; }
+function have(n){ S.have[n]=!S.have[n]; patch(); }
+function usual(n){ S.usual[n]=!S.usual[n]; patch(); }
+function inc(n){ S.inc[n]=!S.inc[n]; patch(); }
+function staples(){ S.staplesOpen=!S.staplesOpen; patch(); }
+// The one orchestrated moment: the ticket rolls up a line per item the server confirms, the count ticks down, the fuse fills;
+// then the mark lands and Meals takes over. The pace is the real write's pace, never a fake progress bar.
+function runSend(){
+  const h = document.getElementById('hub'), roll=h.querySelector('.roll'), fuse=h.querySelector('.fuse i'), c=h.querySelector('.count');
+  const n = toBuy().length; let i = 0;
+  roll.style.transform='none'; fuse.style.transform='scaleX(0)'; c.innerHTML=`<span class="tick">${n}</span>`;
+  const L = roll.children; [...L].forEach(e=>e.classList.remove('sent'));
+  const step = () => { L[i].classList.add('sent'); i++; roll.style.transform=`translateY(-${Math.max(0,Math.min(i-2,n-5))*37}px)`; fuse.style.transform=`scaleX(${i/n})`; c.innerHTML=`<span class="tick">${n-i}</span>`;
+    if (i<n) timer=setTimeout(step, 120);
+    else timer=setTimeout(()=>{ const card=c.closest('.card'); card.innerHTML=`<div class="col landed" style="align-items:center;gap:14px;padding:64px 0;text-align:center"><span class="mark">${I('check',34,3)}</span><div style="font-size:var(--rail-fs-heading);font-weight:650">On both phones</div><div style="font-size:var(--rail-fs-body);color:var(--c-rail-soft)">${n} items, by aisle</div></div>`; timer=setTimeout(()=>go('locked'),1300); }, 420); };
+  timer = setTimeout(step, 500);
+}
+if (/nav/.test(location.search)) document.body.classList.add('nav-on');
+document.getElementById('sw').innerHTML = Object.keys(STATES).map(k=>`<a href="#${k}">${k}</a>`).join('');
+addEventListener('hashchange',()=>render(location.hash.slice(1)));
+render(location.hash.slice(1)||'shop');
+</script>
+</body></html>
