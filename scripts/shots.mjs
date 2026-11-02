@@ -7,6 +7,11 @@
  * Writes public/shots/<name>.png (each exactly 1263×841) and public/shots/manifest.json
  * ({ "sha": … }, nothing else).
  *
+ *   npm run shots -- --only recipes   a build-log image (LOG_SCREENS): public/assets/log/<name>.png,
+ *                                     its product SHA recorded in public/assets/log/manifest.json.
+ *                                     Never part of a default run: a log entry's image is pinned to
+ *                                     the merge it describes, so it doesn't follow main.
+ *
  * Privacy, in order of defence:
  *   - the product is a fresh clone in .cache/ (gitignored), so there is no local config in it;
  *   - the server gets its own config, written here from config/homeroom.example.json with every
@@ -25,7 +30,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadAllowlist, loadDenyList, scanFile, format } from './check-site.mjs';
 
@@ -34,6 +39,7 @@ const REPO = 'praveenaravind25/homeroom';
 const CACHE = join(ROOT, '.cache');
 const PRODUCT = join(CACHE, 'homeroom');
 const OUT = join(ROOT, 'public', 'shots');
+const LOG_OUT = join(ROOT, 'public', 'assets', 'log');
 
 const W = 1263;
 const H = 841;
@@ -42,7 +48,7 @@ const NOW = '2026-10-15T16:20:00-07:00';
 const SEED = 20261015;
 const PORT = 4797;
 const SAMPLE_HOUSEHOLD = ['Avery', 'Jordan', 'Sam', 'Riley'];
-const SOURCES = ['photos', 'calendar', 'home', 'lists'];
+const SOURCES = ['photos', 'calendar', 'home', 'lists', 'recipes']; // recipes: the fixture box (fixtures/recipes, CC0)
 
 // ---------------------------------------------------------------- helpers
 
@@ -97,6 +103,7 @@ function writeConfig(dataDir) {
   // Nothing that names a secret file or a device, even an example one.
   delete cfg.immich;
   delete cfg.fully;
+  delete cfg.recipes; // an example drive path and key file; the fake box needs neither
   const path = join(CACHE, 'shots.config.json');
   if (/\.local\.json$/.test(path)) die('refusing a *.local.json config');
   writeFileSync(path, JSON.stringify(cfg, null, 2));
@@ -153,7 +160,8 @@ async function serve(env) {
   // The server's own word: "[homeroom] development on http://… (photos=fake calendar=fake …)".
   const reported = /\(([^)]*)\)/.exec(banner)?.[1] ?? '';
   const pairs = Object.fromEntries(reported.split(/\s+/).filter(Boolean).map((p) => p.split('=')));
-  if (!SOURCES.every((s) => pairs[s] === 'fake')) {
+  // Every pinned source must be listed, and nothing it lists (a source added later) may be real.
+  if (!SOURCES.every((s) => pairs[s] === 'fake') || Object.values(pairs).some((v) => v !== 'fake')) {
     child.kill();
     die('the running server did not report every source as fake');
   }
@@ -210,6 +218,37 @@ const SCREENS = {
     }, null, { timeout: 15_000 });
   },
 };
+
+/**
+ * Build-log images (content/log/README.md): same capture and checks, written to public/assets/log/.
+ * The recipe is the sample box's corn bowl, reached as the product's e2e does (e2e/recipes.spec.ts),
+ * then stepped to 6 servings (2× the recipe's 3) so the shot shows the rescale (⅔ cup, 4–6 cloves).
+ */
+const LOG_SCREENS = {
+  recipes: async (page) => {
+    const bowl = 'r-5a3c1e0b9d';
+    await nav(page, 'meals');
+    await page.locator('[data-recipe-box-entry]').click();
+    await page.locator(`[data-shelf="new"] [data-recipe-card="${bowl}"]`).click();
+    await page.locator(`[data-screen="recipe"][data-recipe="${bowl}"]`).waitFor();
+    await page.locator('[data-review-line]').waitFor();
+    await page.locator('[data-watch]').waitFor();
+    // The wall opens at its own serving count, not the recipe's: step until it reads 6 (2× the recipe's 3).
+    const servings = page.locator('[data-servings]');
+    for (let i = 0; i < 12 && (await servings.textContent())?.trim() !== '6'; i++) await page.locator('[data-servings-up]').click();
+    await page.locator('[data-ingredient="garlic"] [data-qty]').filter({ hasText: /^4–6 cloves$/ }).waitFor();
+    // The hero comes off the (temp) drive through the media route: wait until it has pixels.
+    await page.waitForFunction(() => document.querySelector('[data-hero] img')?.naturalWidth > 0);
+    await page.mouse.move(0, 0); // no hover state left on the stepper
+    // A stepper click can nudge the left column's scroll (it scrolls a few px rather than clip):
+    // rest every scroller on the screen at the top, so the hero is whole and the shot repeats.
+    await page.locator('[data-screen="recipe"]').evaluate((root) => {
+      for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
+    });
+  },
+};
+
+const outFor = (name) => (LOG_SCREENS[name] ? LOG_OUT : OUT);
 
 async function toRail(page) {
   await page.mouse.click(600, 400);
@@ -281,11 +320,11 @@ async function capture(chromium, names, fresh) {
         await page.locator('[data-clock]').waitFor();
         await page.locator('[data-credit]').waitFor({ state: 'attached' });
         await pinDrift(page);
-        await SCREENS[name](page);
+        await (SCREENS[name] ?? LOG_SCREENS[name])(page);
         await page.evaluate(() => document.fonts.ready);
         await page.waitForTimeout(1800); // the settle curve; the screenshot then pins any stragglers
         await pinDrift(page); // the photo in the rail's thumbnail keeps drifting under the Rail
-        const file = join(OUT, `${name}.png`);
+        const file = join(outFor(name), `${name}.png`);
         const png = await page.screenshot({ animations: 'disabled', caret: 'hide', scale: 'css' });
         writeFileSync(file, stripPng(png));
         if (errors.length) log(`${name}: page logged ${errors.length} error(s): ${errors[0].slice(0, 120)}`);
@@ -325,17 +364,17 @@ export function pngSize(buf) {
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
 }
 
-function verify(shots) {
+function verify(files) {
   const { entities, vocabulary } = loadAllowlist();
   const ctx = { allow: entities, terms: loadDenyList(vocabulary).terms };
   const problems = [];
-  for (const name of [...shots.map((s) => `${s}.png`), 'manifest.json']) {
-    const abs = join(OUT, name);
+  for (const abs of files) {
+    const name = relative(ROOT, abs);
     if (name.endsWith('.png')) {
       const { width, height } = pngSize(readFileSync(abs));
       if (width !== W || height !== H) problems.push(`${name} is ${width}×${height}, not ${W}×${H}`);
     }
-    for (const f of scanFile(abs, join('public', 'shots', name), ctx)) problems.push(format(f));
+    for (const f of scanFile(abs, name, ctx)) problems.push(format(f));
   }
   if (problems.length) die(`output failed verification:\n  ${problems.join('\n  ')}`);
 }
@@ -346,7 +385,7 @@ async function main() {
   const ref = arg('ref', 'main');
   const only = arg('only', null)?.split(',');
   const names = only ?? Object.keys(SCREENS);
-  const unknown = names.filter((n) => !SCREENS[n]);
+  const unknown = names.filter((n) => !SCREENS[n] && !LOG_SCREENS[n]);
   if (unknown.length) die(`unknown screen(s): ${unknown.join(', ')}`);
 
   const sha = process.argv.includes('--no-clone') ? reuse() : freshClone(ref);
@@ -372,16 +411,31 @@ async function main() {
   let result;
   try {
     const { chromium } = createRequire(join(PRODUCT, 'package.json'))('@playwright/test');
-    mkdirSync(OUT, { recursive: true });
+    for (const n of names) mkdirSync(outFor(n), { recursive: true });
     result = await capture(chromium, names, fresh);
   } finally {
     rmSync(home, { recursive: true, force: true });
     rmSync(dataDir, { recursive: true, force: true });
   }
 
-  writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify({ sha }, null, 2)}\n`);
-  verify(result.shots);
-  log(`done: ${result.shots.length} shot(s) from ${sha.slice(0, 12)} into public/shots/`);
+  const files = result.shots.map((n) => join(outFor(n), `${n}.png`));
+  // public/shots/ is one product commit: its manifest moves only when one of its shots does.
+  if (result.shots.some((n) => SCREENS[n])) {
+    writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify({ sha }, null, 2)}\n`);
+    files.push(join(OUT, 'manifest.json'));
+  }
+  // Log images are pinned one by one, so their manifest is a name → SHA map, merged.
+  const logged = result.shots.filter((n) => LOG_SCREENS[n]);
+  if (logged.length) {
+    const path = join(LOG_OUT, 'manifest.json');
+    const prev = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {};
+    const next = { ...prev, ...Object.fromEntries(logged.map((n) => [n, sha])) };
+    const sorted = Object.fromEntries(Object.keys(next).sort().map((k) => [k, next[k]]));
+    writeFileSync(path, `${JSON.stringify(sorted, null, 2)}\n`);
+    files.push(path);
+  }
+  verify(files);
+  log(`done: ${result.shots.length} shot(s) from ${sha.slice(0, 12)}`);
   if (result.missing.length) {
     console.error(`shots: missing ${result.missing.join(', ')} (not reachable in the sample build at this commit)`);
     process.exit(1);

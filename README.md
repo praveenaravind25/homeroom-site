@@ -33,7 +33,9 @@ The script makes a fresh clone of `praveenaravind25/homeroom` in `.cache/` (giti
 
 It writes eight 1263×841 PNGs to `public/shots/` (`ambient`, `glance`, `rail-today`, `week`, `home`, `who`, `chores`, `add-sheet`) plus `manifest.json` (the product commit SHA only). The shots are stripped of metadata and put through the privacy check before the script exits.
 
-Runs are repeatable: the clock is pinned (Thursday 15 October 2026, 4:20 PM, household time), the RNG is seeded, each shot gets a fresh server, and animations are settled. Re-running on the same product commit gives byte-identical files, except for the rail's 72 px Photos thumbnail, which can differ by about 1–3/255 per channel (GPU resampling, not visible).
+Build-log images are separate screens, captured only by name and never in a default run, because a log entry's image stays pinned to the merge it describes. `npm run shots -- --ref <merge-sha> --only recipes` writes `public/assets/log/recipes.png` (the sample box's corn bowl at 6 servings, from the product's generated CC0 fixtures in `fixtures/recipes/`) and records its product SHA in `public/assets/log/manifest.json`. These images get the same fake-only config, empty `HOME`, PNG strip and privacy check as the others. To add one, add an entry to `LOG_SCREENS` in `scripts/shots.mjs`.
+
+Runs are repeatable: the clock is pinned (Thursday 15 October 2026, 4:20 PM, household time), the RNG is seeded, each shot gets a fresh server, and animations are settled. Re-running on the same product commit gives byte-identical files, except for the rail's 72 px Photos thumbnail, which can differ by about 1–3/255 per channel (GPU resampling, not visible). The recipe image has the same noise, up to about 5/255, in its downscaled photos (hero and step thumbnails).
 
 Needs Node ≥ 22.18, `gh` signed in with read access to the product repo, and about a minute. Playwright and Chromium come from the product's own dev dependencies, so this repo stays dependency-free.
 
