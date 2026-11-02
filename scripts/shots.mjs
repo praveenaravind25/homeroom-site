@@ -292,6 +292,48 @@ const LOG_SCREENS = {
       for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
     });
   },
+  // #89 (product PR #107): Cook mode on the fake box's corn bowl, as the product's e2e/cook.spec.ts
+  // reaches it. Meals → Recipe box → the bowl → Cook it. The bowl's quantities (steps 1–2) and its
+  // timers (steps 3–4) sit on different steps, so: start both timers, then step back to 2. One frame
+  // then has the clip, "Step 2 of 5", the step, its quantity pills and the timers still running.
+  cook: async (page) => {
+    const bowl = 'r-5a3c1e0b9d';
+    const view = page.locator('[data-cook]');
+    const go = async (n) => {
+      for (let at = Number(await view.getAttribute('data-cook-step')); at !== n; at += at < n ? 1 : -1) {
+        await page.locator(at < n ? '[data-cook-next]' : '[data-cook-back]').click();
+        await page.locator(`[data-cook][data-cook-step="${at < n ? at + 1 : at - 1}"]`).waitFor();
+      }
+    };
+    await nav(page, 'meals');
+    await page.locator('[data-recipe-box-entry]').click();
+    await page.locator(`[data-shelf="new"] [data-recipe-card="${bowl}"]`).click();
+    await page.locator(`[data-screen="recipe"][data-recipe="${bowl}"]`).waitFor();
+    await page.locator('[data-exit="cook"]').click();
+    await page.locator('[data-cook][data-cook-step="1"]').waitFor();
+    // Hold the page clock while the timers start, then run it a fixed span: the same reading every run.
+    await page.clock.pauseAt(new Date(Date.parse(NOW) + 5 * 60_000));
+    await go(3);
+    await view.locator('div[data-timer="suggested"] [data-timer-start]').click(); // the sear, ~8 min
+    await go(4);
+    await view.locator('div[data-timer="given"] [data-timer-start]').click(); // the corn, 4 min
+    await page.clock.runFor(83_000);
+    await go(2);
+    await view.locator('[data-uses] li').nth(3).waitFor();
+    await view.locator('[data-other-timer]').filter({ hasText: /Step 3\s*6:37/ }).waitFor();
+    await view.locator('[data-other-timer]').filter({ hasText: /Step 4\s*2:37/ }).waitFor();
+    // The clip runs on real media time: rest it on one decoded frame so the shot repeats.
+    await view.locator('[data-clip]').evaluate(async (v) => {
+      v.pause();
+      v.currentTime = 1;
+      if (v.seeking || v.readyState < 2) await new Promise((r) => v.addEventListener('seeked', r, { once: true }));
+    });
+    await page.mouse.move(0, 0); // no hover state left on a button
+    // A button's focus() scrolls the clipped view by a few px (overflow: hidden): put it back.
+    await view.evaluate((root) => {
+      for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
+    });
+  },
   // #54 (product PR #100): one press on the fake doorbell wakes Ambient into the full camera view,
   // as the product's e2e/takeover.spec.ts does it. The sample build's own fake, no doorbell needed.
   // homeroom-site #22 (product #104): Ambient's option D text style, pinned for the build log's "after".
