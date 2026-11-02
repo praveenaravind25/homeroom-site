@@ -10,7 +10,7 @@
 5. **Build log:** short entries for page-worthy milestones.
 
 **Hard rules:**
-- **Privacy:** no real household data, ever. Imagery comes only from the product's sample-data build (the sample household Avery, Jordan, Sam and Riley, and fake photos). A privacy check runs on every PR.
+- **Privacy:** no real household data (names, calendar, config, addresses, metadata). Text and examples come from the product's sample-data build (the sample household Avery, Jordan, Sam and Riley). **Imagery may use the owner-approved photos in `source-photos/owner/`** (owner, 2026-11-02) so the wall looks real; otherwise the fake photos. A privacy check runs on every PR.
 - **Static site:** no runtime server, fast, works at phone width. Deployed with Cloudflare Pages (owner account step).
 - **Voice:** plain, warm, specific; no hype.
 
