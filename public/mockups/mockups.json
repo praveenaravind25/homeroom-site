@@ -58,6 +58,14 @@
    "shots": 6
   },
   {
+   "slug": "issue-119",
+   "title": "Done shopping: bought progress on the wall, clear what's bought (UC-74)",
+   "ref": "Product #119",
+   "date": "2026-11-02",
+   "thumb": "all-bought.png",
+   "shots": 12
+  },
+  {
    "slug": "issue-112",
    "title": "Home: show every thermostat (Hallway + Den), not just the first",
    "ref": "Product #112",
