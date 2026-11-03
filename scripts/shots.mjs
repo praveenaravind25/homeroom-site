@@ -387,7 +387,66 @@ const LOG_SCREENS = {
     await page.locator('.hub[data-mode="ambient"]').waitFor({ state: 'attached' }); // never the Rail
     await page.mouse.move(0, 0);
   },
+  // #48 (product PR #124): Yearbook's title page, as the product's e2e/yearbook.spec.ts reaches it.
+  // The story is pinned before the page loads (BEFORE_LOAD); one advance puts its first photo up:
+  // YEARBOOK, "3 years ago today", the stamp and the beads, all landed. Run with an owner photo:
+  // --only yearbook --photo owner-02.
+  yearbook: async (page) => {
+    if (!(await page.evaluate(() => window.__homeroom.advance()))) throw new Error('the wall would not advance to the story');
+    await page.locator('[data-yearbook][data-story-mode="page"].on.landed').waitFor({ timeout: 8000 });
+    await page.locator('[data-yb-title]').filter({ hasText: STORY.title }).waitFor();
+    await page.locator('[data-yb-stamp]').filter({ hasText: /\S/ }).waitFor();
+    await page.locator('[data-credit].out').waitFor({ state: 'attached' }); // the story has the corner
+    await page.mouse.move(0, 0);
+  },
 };
+
+/**
+ * Yearbook's story, as the server would send it: STORY.count photos from three years before the pinned
+ * clock, at a fixture place (never a real trip). The library's own photos fill it, so it works on the
+ * fixtures or on one owner photo; the wall commits a story only once every photo has loaded.
+ */
+const STORY = { title: '3 years ago today', place: 'Harbourtown', count: 4 };
+
+/** The library's landscape photos (the fixtures, or the one owner photo --photo swapped in). */
+function libraryPhotos() {
+  const lib = JSON.parse(readFileSync(join(PRODUCT, 'fixtures', 'photos', 'manifest.json'), 'utf8'));
+  const photos = lib.filter((p) => !p.hidden && !p.isScreenshot && p.width > p.height);
+  if (!photos.length) throw new Error('no landscape photo in the library to tell a story with');
+  return photos;
+}
+
+async function pinStory(page) {
+  const photos = libraryPhotos();
+  const day = NOW.slice(5, 10); // the story is an anniversary of the pinned clock's month-day
+  const year = Number(NOW.slice(0, 4)) - 3;
+  let n = 0;
+  const pick = ({ file, width, height }, extra = {}) => ({
+    id: `fake:${file}#${n++}`,
+    imageUrl: `/api/v1/photos/fake%3A${file}/image?size=display`,
+    width, height, orientation: 'landscape', layout: 'single', pairedWith: null,
+    why: { headline: 'A favourite' }, takenAt: null, people: [], duplicateGroupId: null,
+    focus: null, tone: '#2C4255', place: null, story: null,
+    ...extra,
+  });
+  const story = Array.from({ length: STORY.count }, (_, index) => pick(photos[index % photos.length], {
+    why: { headline: `Yearbook: ${STORY.title}, ${index + 1} of ${STORY.count}` },
+    takenAt: `${year}-${day}T${10 + index}:00:00${NOW.slice(-6)}`,
+    place: { city: STORY.place, country: null },
+    story: { id: `yearbook:${year}:${day}`, kind: 'yearbook', title: STORY.title, index, count: STORY.count },
+  }));
+  // The first refill: an ordinary photo, then the story, then ordinary photos. Every later one: ordinary only.
+  let first = true;
+  await page.route('**/api/v1/photos/next*', (route) => {
+    const ordinary = () => photos.slice(0, 3).map((p) => pick(p));
+    const data = first ? [pick(photos.at(-1)), ...story, ...ordinary()] : ordinary();
+    first = false;
+    return route.fulfill({ json: { source: 'photos', data, asOf: new Date().toISOString(), stale: false } });
+  });
+}
+
+// A log screen that needs its own photo queue sets it up before the page first loads.
+const BEFORE_LOAD = { yearbook: pinStory };
 
 /**
  * A still finger held on the lead print past the long-press, then lifted (the product's e2e
@@ -455,6 +514,7 @@ async function capture(chromium, names, fresh) {
       });
       const page = await context.newPage();
       await page.clock.install({ time: new Date(NOW) });
+      await BEFORE_LOAD[name]?.(page);
       await page.addInitScript((seed) => {
         let s = seed >>> 0;
         Math.random = () => {
