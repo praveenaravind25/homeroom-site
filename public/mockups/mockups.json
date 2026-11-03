@@ -58,6 +58,14 @@
    "shots": 6
   },
   {
+   "slug": "issue-112",
+   "title": "Home: show every thermostat (Hallway + Den), not just the first",
+   "ref": "Product #112",
+   "date": "2026-11-02",
+   "thumb": "current.png",
+   "shots": 8
+  },
+  {
    "slug": "issue-109",
    "title": "Calm photo framing: smart crop on faces, no Ken Burns pan, upright photos",
    "ref": "Product #109",

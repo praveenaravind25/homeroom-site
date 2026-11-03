@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, initial-scale=1">
+<title>Homeroom · #112 Every thermostat on Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<!--
+  Design gate for issue #112 (UC-15). Hand-built against app/src/styles/tokens.css v0.21 and the real
+  Home kit (Home.svelte, ClimateCard, SceneTile, LightTile, EntryTile, icons.ts). Placeholder imagery only.
+  States (hash):
+    #current      today, one thermostat (must stay pixel-unchanged)
+    #twin         Option A · Twin (recommended): two zones side by side in the one card
+    #twin-sheet   A · the Den's mode & fan sheet
+    #twin-down    A · the Den unavailable, the Hallway fully usable
+    #twin-three   A · three zones: two on the card, "All 3 ›" opens the rest
+    #twin-all     A · the All 3 sheet
+    #stacked      Option B · Stacked: two full rows, Scenes tiles drop to 76 px
+    #gap          Option C · what if: the gap line (how far each room is from its target)
+  Tap −/+ (the number ticks), the mode pill (opens the sheet), segments, Esc / scrim to close.
+-->
+<style>
+:root{
+  --c-chalk:#F7F4EE; --c-brass:#EDC67C; --c-rail-ground:#12100E; --c-s1:#1C1916; --c-s2:#25211D; --c-s3:#2F2A25;
+  --c-rail-soft:#CFC8BB; --c-mute:#8F887D; --c-rail-hair:rgb(247 244 238 / .1); --c-lamp:#F0D49B; --c-lamp-ink:#5B4B2C;
+  --c-live:#E5534B; --c-ground:#0A0908;
+  --c-person-1:#D49A86; --c-person-2:#86B6A6; --c-person-3:#AFA0D6; --c-person-4:#B3BC85;
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --rail-fs-label:13px; --rail-fs-meta:14px; --rail-fs-body:16px; --rail-fs-title:28px; --rail-fs-setpoint:76px;
+  --tracking-rail-label:.14em;
+  --r-card:22px; --r-tile:16px; --r-pill:999px;
+  --rail-gap:16px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1); --ease-out:cubic-bezier(.4,0,.2,1);
+  --dur-rise:520ms; --rail-stagger:50ms; --rail-rise-from:translateY(16px); --dur-press:180ms; --press-scale:.97;
+  --dur-tick:260ms; --tick-travel:10px; --dur-indicator:320ms; --dur-sheet:420ms; --dur-scrim:380ms; --sheet-from:translateX(40px);
+  --dur-progress:520ms;
+  --c-sheet-scrim:rgb(8 7 6 / .55); --shadow-sheet:0 20px 60px rgb(0 0 0 / .5);
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+}
+@media (prefers-reduced-motion: reduce){
+  :root{ --rail-rise-from:none; --press-scale:1; --tick-travel:0px; --dur-indicator:0ms; --sheet-from:none; --rail-stagger:0ms; --dur-rise:320ms; --dur-sheet:320ms; --dur-progress:0ms; }
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:#000;font-family:var(--font);color:var(--c-chalk)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+button:focus-visible,[role=slider]:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+svg{display:block;flex:none}
+
+#hub{position:relative;width:1263px;height:841px;overflow:hidden;background:var(--c-rail-ground)}
+.rail{position:absolute;left:0;top:0;bottom:0;width:104px;box-shadow:1px 0 0 var(--c-rail-hair);display:flex;flex-direction:column;align-items:center;padding:20px 0 16px;gap:4px}
+.nav{width:84px;padding:10px 0;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--c-rail-soft);text-align:center}
+.nav.on{background:var(--c-s2);color:var(--c-chalk)}
+.thumb{width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--c-rail-soft)}
+.thumb img{width:72px;height:48px;border-radius:10px;object-fit:cover}
+.header{position:absolute;left:128px;right:24px;top:22px;height:60px;display:flex;align-items:center;gap:14px}
+.title{font-size:var(--rail-fs-title);font-weight:650;letter-spacing:-.01em;line-height:1.15}
+.summary{font-size:15px;color:var(--c-rail-soft)}
+.who{display:flex;gap:6px}
+.av{width:34px;height:34px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--c-rail-ground)}
+.av.away{background:var(--c-s2)!important;color:var(--c-rail-soft);box-shadow:inset 0 0 0 2px var(--p)}
+.icn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:var(--c-s2);flex:none}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--c-s2);font-size:16px;font-weight:600;min-height:44px}
+.btn.pri{background:var(--c-chalk);color:var(--c-rail-ground)}
+.content{position:absolute;left:128px;top:100px;width:1111px;height:717px}
+
+.home{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr);gap:var(--rail-gap);height:717px}
+.col{display:flex;flex-direction:column;gap:var(--rail-gap);min-height:0}
+.rise{animation:rise var(--dur-rise) var(--ease-settle) both;animation-delay:calc(var(--i,0) * var(--rail-stagger))}
+.still .rise,.settled{animation:none!important}
+@keyframes rise{from{opacity:0;transform:var(--rail-rise-from)}to{opacity:1;transform:none}}
+.card{display:flex;flex-direction:column;gap:10px;min-height:0;padding:20px 22px;border-radius:var(--r-card);background:var(--c-s1);overflow:hidden}
+.fill{flex:1}
+.head{display:flex;align-items:center;gap:10px;min-height:32px}
+.lab{flex:1;min-width:0;font-size:var(--rail-fs-label);font-weight:650;letter-spacing:var(--tracking-rail-label);text-transform:uppercase;color:var(--c-mute)}
+.go{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin:-6px -8px -6px 0;padding:0 6px 0 10px;border-radius:var(--r-pill);font-size:var(--rail-fs-meta);color:var(--c-rail-soft)}
+.press:active:not([aria-disabled=true]){transform:scale(var(--press-scale));transition:transform var(--dur-press) var(--ease-out)}
+
+.scenes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.scene{display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-height:96px;padding:14px;border-radius:var(--r-tile);background:var(--c-s2);font-size:16px;font-weight:550}
+.compact .scene{min-height:76px}
+.scene .sub{font-size:14px;color:var(--c-rail-soft);min-height:1.2em;display:block}
+.compact .scene .sub{display:none}
+
+.rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 10px}
+.room{display:flex;flex-direction:column;gap:6px;min-width:0}
+.room.wide{grid-column:span 2}
+.room-label{font-size:14px;color:var(--c-rail-soft)}
+.room-lights{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:auto}
+.wide .room-lights{grid-template-columns:repeat(2,minmax(0,1fr))}
+.light{display:flex;flex-direction:column;height:120px;border-radius:var(--r-tile);background:var(--c-s2)}
+.light.on{background:var(--c-lamp);color:var(--c-rail-ground)}
+.light .sw{display:flex;gap:12px;padding:14px 14px 0;flex:1;align-items:flex-start}
+.ic{display:grid;place-items:center;width:34px;height:34px;border-radius:999px;background:var(--c-s3);color:var(--c-rail-soft);flex:none}
+.light.on .ic{background:none;box-shadow:inset 0 0 0 1.5px var(--c-lamp-ink);color:var(--c-rail-ground)}
+.nm{font-size:16px;font-weight:550;line-height:1.2;display:block}
+.st{font-size:14px;color:var(--c-mute)}
+.light.on .st{color:var(--c-lamp-ink)}
+.dim{height:48px;display:flex;align-items:center;padding:0 14px 4px}
+.dim .track{position:relative;flex:1;height:6px;border-radius:999px;background:var(--c-lamp-ink)}
+.dim .track i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--c-rail-ground)}
+.dim .track b{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:999px;background:var(--c-rail-ground);box-shadow:inset 0 0 0 3px var(--c-lamp)}
+
+.entries{display:flex;flex-direction:column;gap:10px}
+.entry{display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px;border-radius:var(--r-tile);background:var(--c-s2)}
+.cam-card{padding:14px}
+.cam{position:relative;flex:1;border-radius:16px;overflow:hidden;background:#000}
+.cam img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(.65) contrast(1.15) brightness(.8)}
+.cam .tag{position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;background:rgb(0 0 0 / .55);padding:4px 8px;border-radius:6px}
+.cam .tag i{width:7px;height:7px;border-radius:9px;background:var(--c-live)}
+.cam .cn{position:absolute;left:12px;bottom:10px;font-size:15px;font-weight:650;text-shadow:0 1px 6px #000}
+
+/* ClimateCard (today's, unchanged) */
+.climate{display:flex;flex-direction:column;gap:12px}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.step{display:grid;place-items:center;flex:none;width:64px;height:64px;border-radius:999px;background:var(--c-s2);color:var(--c-chalk)}
+.num{flex:1;min-width:0;text-align:center;overflow:hidden}
+.zone .num{flex:none;width:100%}
+.digits{display:inline-block;font-size:var(--rail-fs-setpoint);font-weight:600;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.deg{font-weight:400;color:var(--c-rail-soft)}
+.up{--d:1;animation:tick var(--dur-tick) var(--ease-settle) both}
+.down{--d:-1;animation:tick var(--dur-tick) var(--ease-settle) both}
+@keyframes tick{from{opacity:.35;transform:translateY(calc(var(--d) * var(--tick-travel)))}to{opacity:1;transform:none}}
+.csub{margin-top:-4px;text-align:center;font-size:14px;color:var(--c-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modes{position:relative;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));padding:4px;border-radius:999px;background:var(--c-s2);isolation:isolate}
+.modes .ind{position:absolute;top:4px;bottom:4px;left:4px;z-index:-1;width:calc((100% - 8px) / var(--n));border-radius:999px;background:var(--c-s3);transition:transform var(--dur-indicator) var(--ease-settle)}
+.seg{min-height:44px;border-radius:999px;font-size:16px;font-weight:550;color:var(--c-rail-soft);text-align:center}
+.seg.on{color:var(--c-chalk);font-weight:650}
+.fan{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--c-s2);font-size:16px;color:var(--c-rail-soft)}
+
+/* ── Option A · Twin ── */
+.twin{flex:1;display:grid;grid-template-columns:repeat(var(--z),minmax(0,1fr));min-height:0;margin:0 -8px}
+.zone{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8px;min-width:0}
+.zone + .zone{box-shadow:-1px 0 0 var(--c-rail-hair)}
+.room-name{font-size:17px;font-weight:600;letter-spacing:-.005em;color:var(--c-chalk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.zone .num{margin-top:12px}
+.zone .csub{margin-top:8px;max-width:100%}
+.pair{display:flex;gap:10px;margin-top:20px}
+.pair .step{width:56px;height:56px}
+.mode-pill{display:inline-flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;min-height:44px;width:122px;padding:0 8px 0 14px;border-radius:999px;background:var(--c-s2);font-size:15px;font-weight:600;color:var(--c-rail-soft)}
+.zone.down .room-name{color:var(--c-rail-soft)}
+.zone.down .digits,.zone.down .deg,.zone.off .digits,.zone.off .deg{color:var(--c-mute)}
+.zone.down .step,.zone.down .mode-pill{background:none;box-shadow:inset 0 0 0 1px var(--c-rail-hair);color:var(--c-mute)}
+.zone.off .step{color:var(--c-mute)}
+
+/* ── Option C · the gap line ── */
+.gap{position:relative;width:108px;height:14px;margin-top:14px}
+.gap .rule{position:absolute;left:0;right:0;top:6px;height:2px;border-radius:2px;background:var(--c-s3)}
+.gap .span{position:absolute;top:6px;height:2px;left:var(--a);width:var(--w);background:var(--c-rail-soft);border-radius:2px}
+.gap .now{position:absolute;top:3px;width:8px;height:8px;margin-left:-4px;border-radius:9px;background:var(--c-rail-soft);left:var(--c);transition:transform var(--dur-progress) var(--ease-settle)}
+.gap .tgt{position:absolute;top:0;width:2px;height:14px;margin-left:-1px;border-radius:2px;background:var(--c-chalk);left:var(--t)}
+.zone .gap + .csub{margin-top:6px}
+
+/* ── Option B · Stacked ── */
+.stack{flex:1;display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+.srow{display:flex;flex-direction:column;gap:8px}
+.srow + .srow{border-top:1px solid var(--c-rail-hair);padding-top:12px}
+.sline{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sline .room-name{font-size:16px}
+.sline .csub{margin:0;text-align:right}
+.srow .stepper .step{width:56px;height:56px}
+.srow .modes{--n:4}
+.srow .seg{font-size:15px}
+.ctl{display:flex;gap:8px}
+.ctl .modes{flex:1}
+.fan-i{display:grid;place-items:center;width:52px;height:52px;border-radius:999px;background:var(--c-s2);color:var(--c-rail-soft);flex:none}
+
+/* Sheet */
+.scrim{position:absolute;inset:0;background:var(--c-sheet-scrim);animation:fade var(--dur-scrim) var(--ease-out) both}
+.sheet{position:absolute;top:16px;right:16px;bottom:16px;width:500px;background:var(--c-s1);border-radius:26px;padding:28px;display:flex;flex-direction:column;gap:20px;box-shadow:var(--shadow-sheet);animation:slide var(--dur-sheet) var(--ease-settle) both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes slide{from{opacity:0;transform:var(--sheet-from)}to{opacity:1;transform:none}}
+.stitle{font-size:28px;font-weight:650;letter-spacing:-.01em}
+.ssub{font-size:15px;color:var(--c-rail-soft);margin-top:2px}
+.sheet .climate{gap:18px;margin-top:8px}
+.sheet .step{width:72px;height:72px}
+.sheet .digits{font-size:96px}
+.other{display:flex;align-items:center;gap:12px;padding:16px 18px;border-radius:var(--r-tile);background:var(--c-s2);color:var(--c-rail-soft);margin-top:-8px}
+.foot{font-size:14px;color:var(--c-mute);display:flex;gap:8px;align-items:center}
+.row-lab{font-size:13px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--c-mute);margin-bottom:-8px}
+.zrow{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--c-rail-hair)}
+.zrow:last-of-type{border-bottom:0}
+.zrow .csub{text-align:left;margin:2px 0 0}
+.zrow .step{width:56px;height:56px}
+.zrow .digits{font-size:48px;min-width:84px;text-align:center}
+</style>
+</head>
+<body>
+<div id="hub"></div>
+<script>
+const P = {
+  cal:'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4',
+  week:'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 4v16M15 4v16',
+  meals:'M7 3v8a2 2 0 0 0 2 2v8M11 3v8a2 2 0 0 1-2 2M17 21V3c-2.5 1.5-3 5-3 8h3',
+  list:'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  chores:'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M8 12.5l3 3 5-6',
+  home:'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+  cam:'M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM16 10l6-3v10l-6-3z',
+  bell:'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4',
+  plus:'M12 5v14M5 12h14', minus:'M5 12h14', chev:'M9 6l6 6-6 6', x:'M6 6l12 12M18 6L6 18',
+  bulb:'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z',
+  lock:'M7 11h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2zM8 11V7a4 4 0 0 1 8 0v4',
+  garage:'M3 21V9l9-5 9 5v12M7 21v-8h10v8M7 16.5h10',
+  door:'M14 3H6v18h8M14 3l5 2v14l-5 2zM11 12h.01',
+  film:'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4',
+  power:'M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0',
+  fan:'M10.4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M12 10.4C12 6 13 3 15.5 3S18 7 13.4 11M13.6 12C18 12 21 13 21 15.5S17 18 13 13.4M12 13.6C12 18 11 21 8.5 21S6 17 10.6 13M10.4 12C6 12 3 11 3 8.5S7 6 11 10.6',
+  thermo:'M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z',
+};
+const I = (n,s=22,w=2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+const MODES = ['heat','cool','auto','off'];
+const LBL = {heat:'Heat',cool:'Cool',auto:'Auto',off:'Off'};
+const DOING = {heat:'heating',cool:'cooling',auto:'auto',off:'off'};
+const S = {
+  zones:[
+    {id:'hallway', room:'Hallway', target:70, current:68, mode:'heat', fan:'auto', avail:true},
+    {id:'den',     room:'Den',     target:71, current:71, mode:'heat', fan:'auto', avail:true},
+    {id:'bedroom', room:'Bedroom', target:67, current:66, mode:'heat', fan:'auto', avail:true},
+  ],
+  tick:{}, sheet:null,
+};
+let view = 'twin';
+
+function zonesShown(){
+  if (view==='current') return [S.zones[0]];
+  if (view==='twin-three') return S.zones;
+  return S.zones.slice(0,2);
+}
+function rail(){
+  const items=[['cal','Today'],['week','Week'],['meals','Meals'],['list','Lists'],['chores','Chores'],['home','Home'],['cam','Cameras']];
+  return `<nav class="rail" aria-label="Screens">${items.map(([ic,l])=>`<button class="nav press${l==='Home'?' on':''}" ${l==='Home'?'aria-current="page"':''}>${I(ic,24)}${l}</button>`).join('')}
+    <div style="flex:1"></div><button class="thumb press"><img src="https://picsum.photos/seed/homeroom-coast/144/96" alt="">Photos</button></nav>`;
+}
+function summary(){
+  const z = zonesShown().filter(z=>z.avail);
+  const lights = '2 lights on';
+  if (z.length===1) return `${lights} · ${z[0].current}° inside`;
+  return `${lights} · ` + z.map(x=>`${x.current}° ${x.room.toLowerCase()}`).join(' · ');
+}
+function header(){
+  const ppl=[['A',1,0],['J',2,1],['S',3,0],['R',4,1]];
+  return `<header class="header rise" style="--i:0"><div><div class="title">Home</div><div class="summary" data-summary>${summary()}</div></div><div style="flex:1"></div>
+    <button class="who" aria-label="Who's home">${ppl.map(([n,c,away])=>`<span class="av${away?' away':''}" style="background:var(--c-person-${c});--p:var(--c-person-${c})">${n}</span>`).join('')}</button>
+    <button class="icn press" aria-label="Announcements">${I('bell',20)}</button><button class="btn pri press">${I('plus',18)} Add</button></header>`;
+}
+function scenesCard(compact){
+  const sc=[['door','Leaving'],['bulb','Evening lights'],['film','Movie'],['power','All off']];
+  return `<section class="card${compact?' compact':''}" aria-label="Scenes"><div class="head"><span class="lab">Scenes</span></div>
+    <div class="scenes">${sc.map(([ic,n])=>`<button class="scene press">${I(ic,20)}<span><span class="nm">${n}</span><span class="sub"></span></span></button>`).join('')}</div></section>`;
+}
+function light(n,on,b){
+  return `<div class="light${on?' on':''}"><button class="sw press" aria-pressed="${on}"><span class="ic">${I('bulb',20)}</span><span><span class="nm">${n}</span><span class="st">${on?`On · ${b}%`:'Off'}</span></span></button>
+    <div class="dim">${on?`<div class="track" role="slider" tabindex="0" aria-label="${n} brightness" aria-valuenow="${b}"><i style="width:${b}%"></i><b style="left:${b}%"></b></div>`:''}</div></div>`;
+}
+function lightsCard(){
+  return `<section class="card fill" aria-label="Lights"><div class="head"><span class="lab">Lights · 2 on</span></div><div class="rooms">
+    <div class="room wide"><span class="room-label">Living room</span><div class="room-lights">${light('Floor lamp',true,60)}${light('Ceiling',false)}</div></div>
+    <div class="room"><span class="room-label">Kitchen</span><div class="room-lights">${light('Pendants',true,80)}</div></div>
+    <div class="room"><span class="room-label">Outside</span><div class="room-lights">${light('Porch',false)}</div></div>
+    <div class="room wide"><span class="room-label">Bedroom</span><div class="room-lights">${light('Bedside',false)}${light('Ceiling',false)}</div></div>
+  </div></section>`;
+}
+function rightCol(){
+  return `<div class="col rise" style="--i:3"><section class="card" aria-label="Locks and doors"><div class="head"><span class="lab">Locks & doors</span></div><div class="entries">
+    <button class="entry press"><span class="ic">${I('lock',18)}</span><span><span class="nm">Front door</span><span class="st">Locked · hold to unlock</span></span></button>
+    <button class="entry press"><span class="ic">${I('garage',18)}</span><span><span class="nm">Garage</span><span class="st">Closed · hold to open</span></span></button></div></section>
+    <section class="card fill cam-card" aria-label="Camera"><div class="head" style="padding:0 8px"><span class="lab">Doorbell</span><button class="go">Cameras${I('chev',16)}</button></div>
+    <button class="cam" aria-label="Open the Doorbell camera"><img src="https://picsum.photos/seed/homeroom-door-7/640/480" alt=""><span class="tag"><i></i>LIVE</span><span class="cn">Doorbell</span></button></section></div>`;
+}
+const digits = z => `<span class="digits ${S.tick[z.id]>0?'up':S.tick[z.id]<0?'down':''}">${z.target}<span class="deg">°</span></span>`;
+const sub = z => !z.avail ? 'Unavailable · as of 9:41' : `Inside ${z.current}° · ${DOING[z.mode]}`;
+const modesSeg = (z, n=4) => { const at=MODES.indexOf(z.mode); return `<div class="modes" role="radiogroup" aria-label="${z.room} mode" style="--n:${n}"><span class="ind" style="transform:translateX(${at*100}%)"></span>${MODES.map(m=>`<button class="seg${m===z.mode?' on':''}" role="radio" aria-checked="${m===z.mode}" data-mode="${m}" data-z="${z.id}">${LBL[m]}</button>`).join('')}</div>`; };
+
+/* Today's ClimateCard, unchanged: the 1-thermostat case. */
+function climateOne(z){
+  return `<section class="card fill" aria-label="Thermostat"><div class="head"><span class="lab">Thermostat</span></div>
+    <div class="climate"><div class="stepper"><button class="step press" data-step="-1" data-z="${z.id}" aria-label="Lower the thermostat">${I('minus',26)}</button>
+      <div class="num" aria-live="polite">${digits(z)}</div><button class="step press" data-step="1" data-z="${z.id}" aria-label="Raise the thermostat">${I('plus',26)}</button></div>
+      <p class="csub">${sub(z)}</p>${modesSeg(z)}
+      <button class="fan press">${I('fan',18)}<span>Fan · ${z.fan}</span></button></div></section>`;
+}
+/* Option C: the gap line. A dot for inside, a tick for the target; the span between is the work left. */
+function gapLine(z){
+  const lo=Math.min(z.current,z.target)-3, hi=Math.max(z.current,z.target)+3, pct=v=>((v-lo)/(hi-lo)*100).toFixed(1)+'%';
+  return `<div class="gap" aria-hidden="true" style="--c:${pct(z.current)};--t:${pct(z.target)};--a:${pct(Math.min(z.current,z.target))};--w:${(Math.abs(z.target-z.current)/(hi-lo)*100).toFixed(1)}%"><span class="rule"></span><span class="span"></span><span class="now"></span><span class="tgt"></span></div>`;
+}
+const gapSub = z => { const d=z.target-z.current; return d===0?`Inside ${z.current}° · holding`:`Inside ${z.current}° · ${Math.abs(d)}° to go`; };
+/* Option A: one zone of the Twin card. */
+function zone(z, gap){
+  const dis = !z.avail || z.mode==='off';
+  return `<div class="zone${z.avail?'':' down'}${z.mode==='off'?' off':''}" role="group" aria-label="${z.room} thermostat" data-zone="${z.id}">
+    <span class="room-name">${z.room}</span>
+    <div class="num" aria-live="polite" aria-atomic="true">${digits(z)}</div>
+    ${gap && z.avail ? gapLine(z)+`<p class="csub">${gapSub(z)}</p>` : `<p class="csub">${z.avail ? sub(z) : 'Offline since 9:41'}</p>`}
+    <div class="pair"><button class="step press" data-step="-1" data-z="${z.id}" aria-label="Lower the ${z.room}" aria-disabled="${dis}">${I('minus',24)}</button><button class="step press" data-step="1" data-z="${z.id}" aria-label="Raise the ${z.room}" aria-disabled="${dis}">${I('plus',24)}</button></div>
+    <button class="mode-pill press" data-sheet="${z.id}" aria-haspopup="dialog" aria-label="${z.room} mode: ${LBL[z.mode]}. Change mode and fan" aria-disabled="${!z.avail}">${LBL[z.mode]}${I('chev',16)}</button>
+  </div>`;
+}
+function climateTwin(gap){
+  const all = zonesShown(), shown = all.slice(0,2);
+  return `<section class="card fill" aria-label="Climate" data-thermostats><div class="head"><span class="lab">Climate</span>${all.length>2?`<button class="go" data-sheet="all" aria-haspopup="dialog">All ${all.length}${I('chev',16)}</button>`:''}</div>
+    <div class="twin" style="--z:${shown.length}">${shown.map(z=>zone(z,gap)).join('')}</div></section>`;
+}
+/* Option B: Stacked rows. */
+function climateStack(){
+  const rows = zonesShown().map(z=>`<div class="srow" role="group" aria-label="${z.room} thermostat">
+      <div class="sline"><span class="room-name">${z.room}</span><span class="csub">${sub(z)}</span></div>
+      <div class="stepper"><button class="step press" data-step="-1" data-z="${z.id}" aria-label="Lower the ${z.room}">${I('minus',24)}</button><div class="num">${digits(z)}</div><button class="step press" data-step="1" data-z="${z.id}" aria-label="Raise the ${z.room}">${I('plus',24)}</button></div>
+      <div class="ctl">${modesSeg(z)}<button class="fan-i press" aria-label="${z.room} fan: ${z.fan}">${I('fan',20)}</button></div></div>`).join('');
+  return `<section class="card fill" aria-label="Climate"><div class="head"><span class="lab">Climate</span></div><div class="stack">${rows}</div></section>`;
+}
+function sheet(){
+  if (!S.sheet) return '';
+  const close = `<button class="icn press" data-close aria-label="Close">${I('x',20)}</button>`;
+  if (S.sheet==='all') {
+    return `<div class="scrim${S.settled?' settled':''}" data-close></div><aside class="sheet${S.settled?' settled':''}" role="dialog" aria-modal="true" aria-label="Climate"><div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><div class="stitle">Climate</div><div class="ssub">${S.zones.length} thermostats · each changes only its own room</div></div>${close}</div>
+      <div>${S.zones.map(z=>`<div class="zrow"><div style="flex:1;min-width:0"><div class="room-name">${z.room}</div><p class="csub">${sub(z)}</p></div>
+      <button class="step press" data-step="-1" data-z="${z.id}" aria-label="Lower the ${z.room}">${I('minus',22)}</button>${digits(z)}<button class="step press" data-step="1" data-z="${z.id}" aria-label="Raise the ${z.room}">${I('plus',22)}</button></div>`).join('')}</div>
+      <div class="foot">${I('thermo',16)} Mode and fan: tap a room's mode on Home.</div></aside>`;
+  }
+  const z = S.zones.find(x=>x.id===S.sheet), other = S.zones.find(x=>x.id!==z.id);
+  return `<div class="scrim${S.settled?' settled':''}" data-close></div><aside class="sheet${S.settled?' settled':''}" role="dialog" aria-modal="true" aria-label="${z.room} thermostat">
+    <div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><div class="stitle">${z.room}</div><div class="ssub">${sub(z)}</div></div>${close}</div>
+    <div class="climate"><div class="stepper"><button class="step press" data-step="-1" data-z="${z.id}" aria-label="Lower the ${z.room}">${I('minus',28)}</button><div class="num" aria-live="polite">${digits(z)}</div><button class="step press" data-step="1" data-z="${z.id}" aria-label="Raise the ${z.room}">${I('plus',28)}</button></div>
+      <span class="row-lab">Mode</span>${modesSeg(z)}
+      <span class="row-lab">Fan</span>
+      <div class="modes" role="radiogroup" aria-label="${z.room} fan" style="--n:2"><span class="ind" style="transform:translateX(${z.fan==='on'?100:0}%)"></span><button class="seg${z.fan==='auto'?' on':''}" role="radio" aria-checked="${z.fan==='auto'}" data-fan="auto" data-z="${z.id}">Auto</button><button class="seg${z.fan==='on'?' on':''}" role="radio" aria-checked="${z.fan==='on'}" data-fan="on" data-z="${z.id}">On</button></div>
+    </div>
+    <div class="foot" style="margin-top:auto">${I('thermo',16)} Only the ${z.room} changes.</div>
+    <button class="other press" data-sheet="${other.id}"><span style="flex:1"><span class="lab" style="display:block">Also on the wall</span><span class="room-name" style="display:block;margin-top:4px">${other.room}</span><span class="csub" style="display:block;text-align:left;margin:2px 0 0">Set ${other.target}° · ${sub(other).toLowerCase()}</span></span>${I('chev',20)}</button></aside>`;
+}
+
+function render(still){
+  let c1;
+  if (view==='current') c1 = scenesCard(false) + climateOne(S.zones[0]);
+  else if (view==='stacked') c1 = scenesCard(true) + climateStack();
+  else c1 = scenesCard(false) + climateTwin(view==='gap');
+  const hub = document.getElementById('hub');
+  hub.className = still ? 'still' : '';
+  hub.innerHTML = rail() + header() +
+    `<main class="content"><div class="home" data-home-screen><div class="col rise" style="--i:1">${c1}</div><div class="col rise" style="--i:2">${lightsCard()}</div>${rightCol()}</div></main>` + sheet();
+  S.tick = {};
+  S.settled = !!S.sheet;
+}
+function fromHash(){
+  const h = (location.hash||'#twin').slice(1);
+  S.zones[1].avail = h!=='twin-down';
+  S.sheet = h==='twin-sheet' ? 'den' : h==='twin-all' ? 'all' : null; S.settled=false;
+  view = (h==='twin-sheet'||h==='twin-down') ? 'twin' : h==='twin-all' ? 'twin-three' : h;
+  if (!['current','twin','twin-three','stacked','gap'].includes(view)) view='twin';
+  render(false);
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('button,[data-close]'); if(!b || b.getAttribute('aria-disabled')==='true') return;
+  if (b.dataset.close!==undefined){ S.sheet=null; render(true); return; }
+  const z = S.zones.find(x=>x.id===b.dataset.z);
+  if (b.dataset.step && z){ if(!z.avail||z.mode==='off') return; z.target+=+b.dataset.step; S.tick[z.id]=+b.dataset.step; render(true); return; }
+  if (b.dataset.mode && z){ z.mode=b.dataset.mode; render(true); return; }
+  if (b.dataset.fan && z){ z.fan=b.dataset.fan; render(true); return; }
+  if (b.dataset.sheet){ S.sheet=b.dataset.sheet; S.settled=false; render(true); }
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'&&S.sheet){ S.sheet=null; render(true); }});
+addEventListener('hashchange', fromHash); fromHash();
+</script>
+</body>
+</html>
