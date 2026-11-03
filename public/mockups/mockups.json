@@ -34,6 +34,14 @@
    "shots": 9
   },
   {
+   "slug": "issue-73",
+   "title": "Settings screen (household, devices, curation, layout)",
+   "ref": "Product #73",
+   "date": "2026-11-02",
+   "thumb": "ambient.png",
+   "shots": 13
+  },
+  {
    "slug": "issue-52",
    "title": "UC-09 \u00b7 Why this photo? + like/hide to teach curation",
    "ref": "Product #52",
