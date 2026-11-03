@@ -121,6 +121,7 @@ const step = stepper(pin,7,(i,p)=>{
   at = i;
   stage.classList.toggle('b-on', i>=1);
   stage.classList.toggle('b-cover', i===0);
+  if(i!==0) stage.classList.remove('hov');                                                 // the finger only lives on the photo
   quiet.forEach(el=>el.style.opacity = i>=1 ? 0 : '');
   caps.forEach(c=>c.classList.toggle('on', +c.dataset.c===i));
   dots.forEach((d,j)=>d.classList.toggle('now', j===i-1));
@@ -153,6 +154,28 @@ stage.addEventListener('click',e=>{
   const r = stage.getBoundingClientRect(); burst(stage, e.clientX - r.left, e.clientY - r.top);
   setTimeout(continueToStory, RM.matches ? 0 : 160);                                       // feedback first, then movement
 });
+
+/* The cursor is the finger: with a real mouse, a touch point trails the pointer over the photo
+   (first-order lag, so it never overshoots) and the native cursor hides while it shows.
+   Hybrid devices only get it from an actual mouse pointer, so a touch never leaves a ghost ring. */
+const FINE = matchMedia('(hover:hover) and (pointer:fine)');
+const fing = document.createElement('div'); fing.className = 'fing'; fing.setAttribute('aria-hidden','true');
+fing.innerHTML = '<span class="ring"><i></i><i></i><b></b></span><span class="lab">Tap</span>'; stage.appendChild(fing);
+let fx = 0, fy = 0, tx = 0, ty = 0, fRaf = 0, fT = 0;
+const fPut = ()=>{ fing.style.transform = `translate3d(${fx}px,${fy}px,0)`; };
+function fTick(now){
+  const a = RM.matches ? 1 : 1 - Math.exp(-(now - fT)/50); fT = now;                    // ~50ms time constant, frame-rate independent
+  fx += (tx-fx)*a; fy += (ty-fy)*a; fPut();
+  fRaf = Math.abs(tx-fx) + Math.abs(ty-fy) > .3 ? requestAnimationFrame(fTick) : 0;
+}
+const fHide = ()=>stage.classList.remove('hov');
+stage.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse' || !FINE.matches || at!==0 || e.target.closest('.top,a,button')){ fHide(); return; }
+  const r = stage.getBoundingClientRect(); tx = e.clientX - r.left; ty = e.clientY - r.top;
+  if(!stage.classList.contains('hov') || RM.matches){ cancelAnimationFrame(fRaf); fRaf = 0; fx = tx; fy = ty; fPut(); stage.classList.add('hov'); return; } // appear in place, no swoop
+  if(!fRaf){ fT = performance.now(); fRaf = requestAnimationFrame(fTick); }
+});
+stage.addEventListener('pointerleave',fHide);
 
 /* The cue arrives once, after the photo has landed; the drift holds while it does. */
 setTimeout(()=>{

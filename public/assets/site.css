@@ -112,6 +112,17 @@ img{max-width:none}
    The same burst, faster, marks the Dinner press inside the tablet, so both touches feel like one hand. */
 .js .b-cover{cursor:pointer}
 .js .b-cover .top{cursor:auto}
+/* The cursor is the finger (mouse only): a resting touch point trails the pointer over the photo, labelled TAP,
+   and stands in for the native cursor there. Links and the nav keep the real cursor. */
+.fing{position:absolute;z-index:9;left:0;top:0;pointer-events:none;opacity:0;transition:opacity 240ms var(--ease-out)}
+.cued.b-cover.hov .fing{opacity:1}
+.js .b-cover.cued.hov{cursor:none}
+.fing .ring{position:absolute;left:-28px;top:-28px;width:56px;height:56px}
+.fing .ring b{width:10px;height:10px;margin:-5px;animation:none}
+.fing .ring i{animation:none}
+.fing .ring i:first-child{opacity:1;transform:none;box-shadow:inset 0 0 0 2px rgb(247 244 238 / .9),0 0 18px rgb(var(--c-scrim) / .4)}
+.fing .lab{position:absolute;left:40px;top:-9px;color:var(--c-chalk);text-shadow:var(--text-shadow);white-space:nowrap}
+@media (hover:none),(pointer:coarse){.fing{display:none}}
 .burst{position:absolute;z-index:9;width:0;height:0;pointer-events:none}
 .burst i{position:absolute;left:-28px;top:-28px;width:56px;height:56px;border-radius:999px;box-shadow:inset 0 0 0 2px var(--c-chalk),0 0 24px rgb(var(--c-scrim) / .35);animation:burst 620ms var(--ease-settle) both}
 .burst i + i{animation-delay:90ms;box-shadow:inset 0 0 0 1.5px rgb(247 244 238 / .6)}
