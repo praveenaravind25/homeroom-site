@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1263, initial-scale=1">
+<title>Homeroom #109 · Calm framing · design mockup</title>
+<!-- Mockup only: the app self-hosts Schibsted Grotesk (styles/fonts); a CDN is fine for a throwaway file. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+/* House tokens, copied 1:1 from app/src/styles/tokens.css (v0.20) — only the ones this mockup uses. */
+:root{
+  --c-chalk:#F7F4EE; --c-soft:#E0DACE; --c-brass:#EDC67C; --c-past:#B8B2A8; --c-scrim:10 9 8;
+  --c-hairline:rgb(247 244 238 / .16); --c-ground:#0A0908;
+  --text-shadow:0 1px 3px rgb(var(--c-scrim) / .6),0 2px 20px rgb(var(--c-scrim) / .5),0 0 48px rgb(var(--c-scrim) / .3);
+  --font:"Schibsted Grotesk",system-ui,Roboto,sans-serif;
+  --fs-clock:216px; --fs-clock-small:120px; --fs-glance:52px; --fs-title:40px; --fs-body:28px; --fs-detail:26px; --fs-caption:24px; --fs-label:22px;
+  --tracking-clock:-.055em; --tracking-label:.16em;
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-5:44px; --sp-edge:56px;
+  --ease-settle:cubic-bezier(.22,1,.36,1); --ease-press:cubic-bezier(.34,1.56,.64,1); --ease-out:cubic-bezier(.4,0,.2,1);
+  --ease-drift:cubic-bezier(.37,0,.63,1);
+  --dur-settle:1400ms; --dur-settle-fade:1100ms; --dur-release:1200ms; --dur-mode:720ms; --dur-leave:280ms;
+  --stagger:40ms; --stagger-lead:160ms;
+  --settle-from:scale(1.035) translateY(8px); --rise-from:translateY(14px);
+  --focus-ring:0 0 0 3px var(--c-ground),0 0 0 6px var(--c-brass);
+  --hub-w:1263px; --hub-h:841px;
+
+  /* NEW in this proposal (#109). Designer-owned values for tokens.json → layout.* */
+  --clock-band-h:376px;     /* layout.clockBand.heightPx: the Glance left stack (351) + one drift step (14), rounded to the 8-grid */
+  --frame-margin:.04;       /* FRAME_MARGIN, of the cell's short side */
+  --gentle-zoom:1.02;       /* hub.ambient.motion.gentleZoom default (cap 1.03) */
+  --print-inset:56px;       /* Print: the print hangs one wall edge in from top, right and bottom */
+  --print-gap:40px;         /* Print: the placard's gutter to the print's edge */
+  --c-wall-light:rgb(247 236 214 / .055); /* Print: the picture-light wash on the ground. Static, never animated */
+}
+@media (prefers-reduced-motion: reduce){
+  :root{ --settle-from:none; --rise-from:none; --dur-settle:0ms; --dur-settle-fade:320ms; --dur-release:320ms; --dur-mode:320ms; --stagger:0ms; --stagger-lead:0ms; }
+  .zoom{ animation:none !important; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;height:100%}
+body{display:grid;place-items:center;font-family:var(--font);color:var(--c-chalk);-webkit-font-smoothing:antialiased}
+#wall{position:relative;width:var(--hub-w);height:var(--hub-h);overflow:hidden;background:var(--c-ground)}
+
+/* ── Photo screens ── */
+.screen{position:absolute;inset:0;opacity:0;transition:opacity var(--dur-settle-fade) var(--ease-settle)}
+.screen.in{opacity:1}
+.screen.out{opacity:1}
+.cell{position:absolute;overflow:hidden;background:#1a1714}
+.cell .settle{position:absolute;inset:0;transform:var(--settle-from);transition:transform var(--dur-settle) var(--ease-settle);transition-delay:calc(var(--i,0) * 120ms)}
+.screen.in .cell .settle{transform:none}
+.cell img{position:absolute;left:0;top:0;display:block;user-select:none;-webkit-user-drag:none}
+.zoom{position:absolute;inset:0}
+.zoom.gentle{animation:gentle var(--gentle-ms,20000ms) var(--ease-drift) forwards}
+@keyframes gentle{from{transform:scale(1)}to{transform:scale(var(--gentle-zoom))}}
+
+/* Print (lone portrait): the photo hangs like a print on a dark wall, lit from above. */
+.ground-light{position:absolute;inset:0;background:radial-gradient(70% 90% at 72% -10%,var(--c-wall-light),transparent 70%)}
+.print{position:absolute;overflow:hidden;box-shadow:0 30px 60px -20px rgb(0 0 0 / .7)}
+.print img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* Mat (lone portrait, alternative): the photo contained over a blurred, dimmed copy of itself. Static blur, never animated. */
+.mat-back{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(36px) saturate(1.1) brightness(.5)}
+.mat-front{position:absolute;top:0;bottom:0}
+.mat-front img{width:100%;height:100%;object-fit:cover}
+
+/* ── The overlay: same geometry as Overlay.svelte ── */
+.overlay{position:absolute;inset:0;pointer-events:none;text-shadow:var(--text-shadow);z-index:2}
+.scrim{position:absolute;inset:0;background:linear-gradient(to top,rgb(var(--c-scrim)/.46) 0px,rgb(var(--c-scrim)/.42) 140px,rgb(var(--c-scrim)/.34) 300px,rgb(var(--c-scrim)/.14) 420px,rgb(var(--c-scrim)/0) 520px)}
+.scrim.glance{opacity:0;background:linear-gradient(to top,rgb(var(--c-scrim)/.3) 0px,rgb(var(--c-scrim)/.26) 300px,rgb(var(--c-scrim)/.12) 520px,rgb(var(--c-scrim)/0) 640px);transition:opacity var(--dur-mode) var(--ease-settle)}
+[data-tier=glance] .scrim.glance{opacity:1}
+.drift{position:absolute;inset:0}
+.left{position:absolute;left:var(--sp-edge);bottom:48px;display:flex;flex-direction:column;align-items:flex-start}
+.eyebrow{font-size:var(--fs-label);font-weight:500;line-height:1;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft);white-space:nowrap}
+.clock{font-size:var(--fs-clock);font-weight:500;line-height:.8;letter-spacing:var(--tracking-clock);margin:22px 0 0 -10px;white-space:nowrap}
+.period{font-size:36px;letter-spacing:.02em;margin-left:var(--sp-2);color:var(--c-soft)}
+.day{display:flex;align-items:center;gap:14px;margin-bottom:var(--sp-3)}
+.wx{font-size:var(--fs-detail);color:var(--c-soft)}
+.wx b{font-size:var(--fs-glance);font-weight:500;letter-spacing:-.03em;color:var(--c-chalk);margin-right:14px}
+.right{position:absolute;right:var(--sp-edge);bottom:52px;width:520px;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.caption{font-size:var(--fs-caption);font-style:italic;color:var(--c-chalk);margin-bottom:10px}
+.stamp{font-size:var(--fs-label);font-weight:500;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-soft)}
+.rise{opacity:0;transform:var(--rise-from);transition:opacity var(--dur-mode) var(--ease-settle),transform var(--dur-mode) var(--ease-settle);transition-delay:calc(var(--i,0) * var(--stagger) + var(--stagger-lead))}
+.on .rise,.rise.on{opacity:1;transform:none}
+.next{width:100%;text-align:left}
+.next .lbl{display:flex;align-items:center;gap:12px;font-size:var(--fs-label);font-weight:500;letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--c-brass)}
+.next .lbl i{width:14px;height:14px;border-radius:999px;background:var(--c-brass);display:block}
+.next .ev{font-size:var(--fs-glance);font-weight:500;letter-spacing:-.02em;line-height:1.05;margin-top:12px}
+.next .sub{font-size:var(--fs-detail);color:var(--c-soft);margin-top:8px}
+.next hr{border:0;height:1px;background:var(--c-hairline);margin:18px 0 12px}
+.next .row{display:flex;justify-content:space-between;font-size:var(--fs-body);color:var(--c-soft);line-height:1.45}
+.next .row span:first-child{color:var(--c-chalk)}
+
+/* Print: the credit leaves the bottom-right corner and becomes the placard, hung beside the print at its top edge. */
+.placard{position:absolute;top:calc(var(--print-inset) + 6px);text-align:right;display:flex;flex-direction:column;align-items:flex-end;max-width:380px}
+.placard .caption{font-size:var(--fs-caption);line-height:1.3}
+.placard hr{width:48px;border:0;height:1px;background:var(--c-hairline);margin:16px 0 14px}
+
+/* ── Framing inspector (debug view: F, or #framing). A mockup annotation, not wall UI. ── */
+.dbg{position:absolute;inset:0;z-index:5;pointer-events:none;display:none;font:600 13px/1.2 var(--font);letter-spacing:.04em;color:#0b1a22;text-shadow:none}
+.show-dbg .dbg{display:block}
+.dbg .band{position:absolute;left:0;right:0;bottom:0;height:var(--clock-band-h);background:repeating-linear-gradient(135deg,rgb(255 120 90 / .16) 0 10px,transparent 10px 20px);border-top:2px dashed rgb(255 140 110 / .95)}
+.dbg .tag{position:absolute;background:#9EE6FF;padding:5px 8px;border-radius:6px;white-space:nowrap}
+.dbg .tag.warn{background:#FFB59E}
+.dbg .box{position:absolute;border:2px solid #9EE6FF;box-shadow:0 0 0 1px rgb(0 0 0 / .4)}
+.dbg .margin{position:absolute;border:1px dashed rgb(158 230 255 / .8)}
+.dbg .box.bad{border-color:#FF8E6E}
+
+/* ── Mockup state switcher: hidden until hovered, focused, or ?nav. Not part of the product. ── */
+#nav{position:fixed;top:10px;left:50%;transform:translate(-50%,-8px);display:flex;gap:6px;padding:6px;background:rgb(18 16 14 / .88);border-radius:999px;z-index:10;opacity:0;transition:opacity .2s var(--ease-out),transform .32s var(--ease-settle);font:500 13px var(--font)}
+#hot{position:fixed;top:0;left:0;right:0;height:56px;z-index:9}
+#hot:hover+#nav,#nav:hover,#nav:focus-within,.nav-on #nav{opacity:1;transform:translate(-50%,0)}
+#nav a{color:#CFC8BB;text-decoration:none;padding:8px 12px;border-radius:999px;transition:transform .18s var(--ease-press),background .18s}
+#nav a:active{transform:scale(.97)}
+#nav a[aria-current=page]{background:#2F2A25;color:var(--c-chalk)}
+#nav a:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+#nav .sep{width:1px;background:#2F2A25;margin:4px 2px}
+</style>
+</head>
+<body>
+<div id="wall" aria-label="Homeroom wall, 1263 by 841">
+  <div id="stage"></div>
+  <div class="overlay" id="overlay" data-tier="ambient">
+    <div class="scrim"></div>
+    <div class="scrim glance"></div>
+    <div class="drift">
+      <div class="left" id="left"></div>
+      <div class="right" id="right"></div>
+      <div id="extra"></div>
+    </div>
+  </div>
+  <div class="dbg" id="dbg"></div>
+</div>
+<div id="hot"></div>
+<nav id="nav" aria-label="Mockup states"></nav>
+
+<script>
+/* ───────── Placeholder photos (picsum) with hand-measured subject boxes, in the photo's own fractions ───────── */
+const P = {
+  camera:   { src:'https://picsum.photos/id/823/1600/1067',  a:1.5,  focus:{x:.35,y:.08,w:.26,h:.38}, from:'people',   n:1, cap:'3 years ago today', stamp:'Tofino · November 2023' },
+  coat:     { src:'https://picsum.photos/id/1005/1600/1067', a:1.5,  focus:{x:.42,y:.23,w:.17,h:.26}, from:'people',   n:1, cap:'The long way home', stamp:'Brighton · March 2022' },
+  canoe:    { src:'https://picsum.photos/id/1011/1600/1067', a:1.5,  focus:{x:.36,y:.26,w:.30,h:.30}, from:'saliency', n:0, cap:'First paddle of the summer', stamp:'Moraine Lake · July 2024' },
+  portrait: { src:'https://picsum.photos/id/1027/1000/1500', a:2/3,  focus:{x:.33,y:.24,w:.37,h:.49}, from:'people',   n:1, cap:'Sunday, doing nothing', stamp:'Amsterdam · May 2024' },
+  partner:  { src:'https://picsum.photos/id/1005/900/1200',  a:3/4,  focus:{x:.34,y:.23,w:.34,h:.26}, from:'people',   n:1, cap:'', stamp:'' },
+};
+const W = 1263, H = 841, SEAM = 4;
+const BAND = 376, MARGIN = 0.04;
+
+/* ───────── frameCrop: the contract (C7) as a mockup port ─────────
+   Cover the cell. Keep the focus box fully inside with a margin; if the cell reaches above the band, keep the box above it;
+   among offsets that pass, take the one nearest the focus centre. Reports what it had to give up. */
+function frameCrop(p, cell, bandTopInCell){
+  const s = Math.max(cell.w / p.a, cell.h);              // photo height in px at cover scale (photo width = a·h)
+  const dh = s, dw = p.a * s;
+  const m = MARGIN * Math.min(cell.w, cell.h);
+  const f = p.focus;
+  const nearest = (lo, hi, t) => lo > hi ? null : Math.min(hi, Math.max(lo, t));
+  const axis = (d, c, b0, b1, extraLo = -Infinity) => {
+    const target = (b0 + b1) / 2 - c / 2;
+    const lo = Math.max(0, b1 + m - c, extraLo), hi = Math.min(d - c, b0 - m);
+    return { v: nearest(lo, hi, target), target: Math.min(d - c, Math.max(0, target)) };
+  };
+  const bx0 = f ? f.x * dw : dw / 2, bx1 = f ? (f.x + f.w) * dw : dw / 2;
+  const by0 = f ? f.y * dh : dh * .38, by1 = f ? (f.y + f.h) * dh : dh * .38;
+  const x = axis(dw, cell.w, bx0, bx1);
+  let bandOk = true, y = { v: null };
+  if (bandTopInCell > 0 && (by1 - by0) + 2 * m <= bandTopInCell) y = axis(dh, cell.h, by0, by1, by1 + m - bandTopInCell);
+  if (y.v === null) { bandOk = bandTopInCell <= 0; y = axis(dh, cell.h, by0, by1); }
+  const fitsX = x.v !== null, fitsY = y.v !== null;
+  return { dw, dh, ox: fitsX ? x.v : x.target, oy: fitsY ? y.v : y.target, fits: fitsX && fitsY, bandOk: bandOk && fitsY, m };
+}
+
+/* ───────── Screens ───────── */
+const CLOCK = { time:'4:12', period:'PM' };
+const DATE = 'Sunday · November 2';
+let gentleMs = 20000;
+
+function cellHTML(p, cell, i, opts = {}){
+  const bandTop = H - BAND - cell.y;
+  const c = opts.legacy ? legacyCrop(p, cell) : frameCrop(p, cell, bandTop);
+  const fx = (p.focus.x + p.focus.w / 2) * c.dw - c.ox, fy = (p.focus.y + p.focus.h / 2) * c.dh - c.oy;
+  return { c, html: `<div class="cell" style="left:${cell.x}px;top:${cell.y}px;width:${cell.w}px;height:${cell.h}px;--i:${i}">
+    <div class="settle"><div class="zoom ${opts.gentle ? 'gentle' : ''}" style="transform-origin:${fx}px ${fy}px;--gentle-ms:${gentleMs}ms">
+      <img src="${p.src}" alt="" style="width:${c.dw}px;height:${c.dh}px;transform:translate(${-c.ox}px,${-c.oy}px)">
+    </div></div></div>` };
+}
+/* Today's lone-portrait tilt, frame 0: the window starts at the top and pans down over the interval. */
+function legacyCrop(p, cell){ const dh = cell.w / p.a; return { dw: cell.w, dh, ox: 0, oy: 0, fits: false, bandOk: false, m: 0 }; }
+
+const HERO = { x:0, y:0, w:W, h:H };
+const DUO = [{ x:0, y:0, w:(W - SEAM) / 2, h:H }, { x:(W + SEAM) / 2, y:0, w:(W - SEAM) / 2, h:H }];
+
+const STATES = {
+  still:   { label:'Still',   tier:'ambient', photos:[['camera', HERO]] },
+  framing: { label:'Framing', tier:'ambient', photos:[['camera', HERO]], dbg:true },
+  glance:  { label:'Glance',  tier:'glance',  photos:[['coat', HERO]] },
+  gentle:  { label:'Gentle',  tier:'ambient', photos:[['canoe', HERO]], gentle:true },
+  before:  { label:'Today (before)', tier:'ambient', photos:[['portrait', HERO]], legacy:true, dbg:true },
+  duo:     { label:'Portrait · Duo', tier:'ambient', photos:[['portrait', DUO[0]], ['partner', DUO[1]]], credit:'portrait' },
+  print:   { label:'Portrait · Print', tier:'ambient', layout:'print' },
+  mat:     { label:'Portrait · Mat',   tier:'ambient', layout:'mat' },
+  crop:    { label:'Portrait · Crop',  tier:'ambient', photos:[['portrait', HERO]], dbg:true },
+  printglance: { label:'Print · Glance', tier:'glance', layout:'print' },
+};
+const ORDER = ['still','framing','glance','gentle','before','duo','print','mat','crop','printglance'];
+
+let dbgForced = false;
+function render(name){
+  const st = STATES[name] || STATES.still;
+  const stage = document.getElementById('stage');
+  const old = [...stage.children];
+  const scr = document.createElement('div'); scr.className = 'screen';
+  let dbg = '', lead = null;
+
+  if (st.layout === 'print') {
+    const p = P.portrait, ph = H - 2 * 56, pw = Math.round(ph * p.a), px = W - 56 - pw;
+    scr.innerHTML = `<div class="ground-light"></div><div class="cell print" style="left:${px}px;top:56px;width:${pw}px;height:${ph}px;background:none"><div class="settle"><img src="${p.src}" alt=""></div></div>`;
+    lead = { p, printX: px };
+  } else if (st.layout === 'mat') {
+    const p = P.portrait, pw = Math.round(H * p.a), px = Math.round((W - pw) / 2);
+    scr.innerHTML = `<div class="cell" style="inset:0;background:none"><div class="settle"><div class="mat-back" style="background-image:url(${p.src})"></div><div class="mat-front" style="left:${px}px;width:${pw}px"><img src="${p.src}" alt=""></div></div></div>`;
+    lead = { p };
+  } else {
+    st.photos.forEach(([key, cell], i) => {
+      const p = P[key];
+      const { c, html } = cellHTML(p, cell, i, { gentle: st.gentle && i === 0, legacy: st.legacy });
+      scr.insertAdjacentHTML('beforeend', html);
+      if (i === 0) lead = { p };
+      // inspector: focus box, margin, verdict
+      const bx = cell.x + p.focus.x * c.dw - c.ox, by = cell.y + p.focus.y * c.dh - c.oy, bw = p.focus.w * c.dw, bh = p.focus.h * c.dh;
+      const cut = by < cell.y || by + bh > cell.y + cell.h || bx < cell.x || bx + bw > cell.x + cell.w;
+      dbg += `<div class="margin" style="left:${bx - c.m}px;top:${by - c.m}px;width:${bw + 2 * c.m}px;height:${bh + 2 * c.m}px"></div>`;
+      dbg += `<div class="box ${cut || !c.bandOk ? 'bad' : ''}" style="left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px"></div>`;
+      const verdict = st.legacy ? 'TODAY · tilt, frame 0 of a 5 min pan · face cut by the frame and the clock'
+        : !c.fits ? `face box ${Math.round(bh)} px > window ${cell.h} px · doesn't fit a 3:2 window · the best still crop still cuts the face (why this is the last rung)`
+        : c.bandOk ? `${p.from === 'people' ? p.n + ' face' : 'saliency'} · in frame · ${Math.round(H - BAND - (by + bh))} px clear of the band` : 'in frame · band relaxed';
+      dbg += `<div class="tag ${cut || !c.bandOk ? 'warn' : ''}" style="left:${Math.max(12, Math.min(W - 640, bx))}px;top:${Math.max(12, by - 34)}px">${verdict}</div>`;
+    });
+  }
+  dbg += `<div class="band"></div><div class="tag warn" style="left:16px;bottom:${BAND + 10}px">clock band · ${BAND} px (layout.clockBand.heightPx)</div>`;
+  document.getElementById('dbg').innerHTML = dbg;
+  document.getElementById('wall').classList.toggle('show-dbg', !!st.dbg || dbgForced);
+
+  // overlay
+  const ov = document.getElementById('overlay');
+  const credit = P[st.credit] || lead.p;
+  const isPrint = st.layout === 'print';
+  ov.dataset.tier = st.tier;
+  const wx = `<div class="day rise" style="--i:0"><p class="wx"><b>14°</b>Clear</p></div>`;
+  document.getElementById('left').innerHTML = `${st.tier === 'glance' ? wx : ''}<p class="eyebrow">${DATE}</p><p class="clock">${CLOCK.time}<span class="period">${CLOCK.period}</span></p>`;
+  const next = `<div class="next">
+      <p class="lbl rise" style="--i:1"><i></i>Next · 4:30</p>
+      <p class="ev rise" style="--i:2">Swim lessons</p>
+      <p class="sub rise" style="--i:3">Rec centre · leave by 4:15</p>
+      <hr class="rise" style="--i:4">
+      <p class="row rise" style="--i:5"><span>Dinner · tacos</span><span>6:30</span></p>
+      <p class="row rise" style="--i:6"><span>Bins out</span><span>8:00</span></p></div>`;
+  const creditHTML = `<p class="caption">${credit.cap}</p><p class="stamp">${credit.stamp}</p>`;
+  const right = document.getElementById('right'), extra = document.getElementById('extra');
+  right.innerHTML = ''; extra.innerHTML = '';
+  if (isPrint) {
+    const r = W - lead.printX + 40;
+    if (st.tier === 'glance') { extra.innerHTML = `<div class="placard" style="right:${r}px;width:${lead.printX - 40 - 56}px;max-width:none;top:auto;bottom:${48 + 175 + 22 + 22 + 62 + 24 + 40}px">${next.replace('class="next"', 'class="next" style="text-align:left"')}</div>`; }
+    else extra.innerHTML = `<div class="placard" style="right:${r}px"><p class="caption">${credit.cap}</p><hr><p class="stamp">${credit.stamp}</p></div>`;
+  } else {
+    right.innerHTML = st.tier === 'glance' ? next : creditHTML;
+  }
+  ov.classList.remove('on'); requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('on')));
+
+  // settle: the incoming screen fades in over the old one, which holds at full opacity until released
+  stage.appendChild(scr);
+  old.forEach(o => o.classList.add('out'));
+  requestAnimationFrame(() => requestAnimationFrame(() => scr.classList.add('in')));
+  setTimeout(() => old.forEach(o => o.remove()), parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dur-release')) || 1200);
+
+  document.querySelectorAll('#nav a').forEach(a => a.setAttribute('aria-current', a.hash === '#' + name ? 'page' : 'false'));
+}
+
+/* nav */
+const nav = document.getElementById('nav');
+ORDER.forEach((k, i) => {
+  if (k === 'before' || k === 'duo') nav.insertAdjacentHTML('beforeend', '<span class="sep"></span>');
+  nav.insertAdjacentHTML('beforeend', `<a href="#${k}" title="${i < 9 ? 'key ' + (i + 1) : ''}">${STATES[k].label}</a>`);
+});
+if (new URLSearchParams(location.search).has('nav')) document.body.classList.add('nav-on');
+const fromHash = () => render((location.hash || '#still').slice(1));
+addEventListener('hashchange', fromHash);
+addEventListener('keydown', e => {
+  if (e.key === 'f' || e.key === 'F') { dbgForced = !dbgForced; fromHash(); }
+  const n = parseInt(e.key, 10); if (n >= 1 && n <= ORDER.length) location.hash = ORDER[n - 1];
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const i = ORDER.indexOf((location.hash || '#still').slice(1)); location.hash = ORDER[(i + (e.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length]; }
+});
+fromHash();
+</script>
+</body>
+</html>

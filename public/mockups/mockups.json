@@ -58,6 +58,14 @@
    "shots": 6
   },
   {
+   "slug": "issue-109",
+   "title": "Calm photo framing: smart crop on faces, no Ken Burns pan, upright photos",
+   "ref": "Product #109",
+   "date": "2026-11-02",
+   "thumb": "before.png",
+   "shots": 10
+  },
+  {
    "slug": "site-issue-1",
    "title": "Showcase \u00b7 Landing page: what, who, why, how it's built",
    "ref": "Site #1",
