@@ -131,9 +131,14 @@ function scrHome(){
 const D = '/assets/dinner/';
 // The four lines the phone ticks, in its order, at the product's own boxes (content px), plus "Lock in · 41 to buy".
 const TICKS = [['cucumber',20,183],['asparagus',20,134],['coconut',395.5,505],['rice',395.5,348]];
-function scrMeals(){ return `<div class="scr" data-s="meals"><img class="shot-full" data-src="${D}meals.webp" width="1111" height="717" alt=""></div>`; }
+/* The captures rise in pieces like the live screens do: one image, cut by position into the header, then
+   each column in turn (Meals: the row labels and seven days; Shopping: three aisle columns, then the bar). */
+const piece = (src,[x,y,w,h],i)=>`<div class="pc rise" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;--i:${i}"><img data-src="${src}" style="left:${-x}px;top:${-y}px" width="1111" height="717" alt=""></div>`;
+const MEALS_CUT = [[0,0,1111,140],[0,140,106,577],...[0,1,2,3,4,5,6].map(j=>[106+145*j,140,j<6?145:135,577])];   // the cut sits above Today's brass ring
+const SHOP_CUT = [[0,0,1111,98],[0,98,368,483],[368,98,375,483],[743,98,368,483],[0,581,1111,136]];
+function scrMeals(){ return `<div class="scr" data-s="meals">${MEALS_CUT.map((c,i)=>piece(D+'meals.webp',c,i)).join('')}</div>`; }
 function scrShopping(){
-  return `<div class="scr" data-s="shopping"><img class="shot-full" data-src="${D}shopping.webp" width="1111" height="717" alt="">
+  return `<div class="scr" data-s="shopping">${SHOP_CUT.map((c,i)=>piece(D+'shopping.webp',c,i)).join('')}
     ${TICKS.map(([k,x,y])=>`<img class="tk" data-tk="${k}" data-src="${D}tick-${k}.webp" style="left:${x}px;top:${y}px" width="320" height="48" alt="">`).join('')}
     <img class="tk lk" data-src="${D}lock.webp" style="left:882px;top:645px" width="222" height="64" alt=""></div>`;
 }
