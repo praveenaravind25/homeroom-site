@@ -87,11 +87,40 @@ sizeDevice();
 const fl = flyer();
 fl.go('cover',{snap:true}); HR.showScreen(hub,'today',{rise:false});
 
+/* ── The burst: a chalk dot springs in and two rings expand from a press point (in parent px) ── */
+function burst(parent,x,y,cls=''){
+  if(RM.matches) return;
+  const b = document.createElement('span'); b.className = ('burst '+cls).trim(); b.style.left = x+'px'; b.style.top = y+'px';
+  b.innerHTML = '<i></i><i></i><b></b>'; parent.appendChild(b); setTimeout(()=>b.remove(),900);
+}
+
+/* ── Click to continue (#26): at step 0, a press on the photo scrolls to the middle of step 1's band,
+   so stepper lands cleanly on 1 and runs its own 900ms zoom. A one-off rAF tween on --ease-settle
+   (behavior:'smooth' can't take the house curve); any wheel, touch or key from the visitor cancels it. ── */
+const settle = (()=>{ // cubic-bezier(.22,1,.36,1): solve x(t)=u by Newton, return y(t)
+  const c = (a,b,t)=>3*a*t*(1-t)*(1-t) + 3*b*t*t*(1-t) + t*t*t, d = (a,b,t)=>3*a*(1-t)*(1-t) + 6*(b-a)*t*(1-t) + 3*(1-b)*t*t;
+  return u=>{ let t = u; for(let k=0;k<8;k++){ const s = d(.22,.36,t); if(Math.abs(s)<1e-6) break; t -= (c(.22,.36,t)-u)/s; t = Math.min(1,Math.max(0,t)); } return c(1,1,t); };
+})();
+let tween = 0;
+const stopTween = ()=>{ if(tween){ cancelAnimationFrame(tween); tween = 0; } };
+['wheel','touchstart','keydown'].forEach(ev=>addEventListener(ev,stopTween,{passive:true}));
+function continueToStory(){
+  const total = Math.max(1, pin.offsetHeight - innerHeight);
+  const to = pin.getBoundingClientRect().top + scrollY + Math.max(48, total/14);
+  stopTween();
+  if(RM.matches){ scrollTo(0,to); return; }
+  const from = scrollY, t0 = performance.now(), dur = 900;
+  const tick = now=>{ const u = Math.min(1,(now-t0)/dur); scrollTo(0, from + (to-from)*settle(u)); tween = u<1 ? requestAnimationFrame(tick) : 0; };
+  tween = requestAnimationFrame(tick);
+}
+
 const caps = [...pin.querySelectorAll('.b-cap')], dots = [...pin.querySelectorAll('.b-dots i')];
 const quiet = [...wall.querySelectorAll('.w-cue')];
-let litT;
+let litT, at = -1;
 const step = stepper(pin,7,(i,p)=>{
+  at = i;
   stage.classList.toggle('b-on', i>=1);
+  stage.classList.toggle('b-cover', i===0);
   quiet.forEach(el=>el.style.opacity = i>=1 ? 0 : '');
   caps.forEach(c=>c.classList.toggle('on', +c.dataset.c===i));
   dots.forEach((d,j)=>d.classList.toggle('now', j===i-1));
@@ -103,11 +132,34 @@ const step = stepper(pin,7,(i,p)=>{
     const want = i===2 ? 'today' : (i<=4 ? 'week' : 'home');
     if(hub.dataset.cur!==want) HR.showScreen(hub,want);
     if(want==='week') HR.setWeek(hub, i===4 ? 2 : 1);                                       // next week slides in
-    if(want==='home') litT = setTimeout(()=>HR.setLit(hub,true),700);                      // Dinner: lamps ripple on
+    if(want==='home') litT = setTimeout(()=>{ HR.setLit(hub,true); pressMark(); },700);   // Dinner: lamps ripple on
   }
   else { fl.go('screen',{dur:'var(--dur-return-idle)'}); HR.sleep(hub); }                  // idle: leans back, slower
 });
 step();
+
+/* The Dinner press inside the tablet gets the same burst, smaller (hub px, scaled with the hub). */
+function pressMark(){
+  const d = hub.querySelector('[data-scene="Dinner"]'); if(!d || hub.dataset.cur!=='home') return;
+  let x = d.offsetWidth/2, y = d.offsetHeight/2;
+  for(let el = d; el && el!==hub; el = el.offsetParent){ x += el.offsetLeft; y += el.offsetTop; }
+  burst(hub,x,y,'sm');
+}
+
+stage.addEventListener('click',e=>{
+  if(at!==0 || e.button!==0 || e.defaultPrevented) return;
+  if(e.target.closest('a,button,input,select,textarea,label,summary,[tabindex],[contenteditable]')) return;
+  const sel = getSelection(); if(sel && String(sel).length) return;
+  const r = stage.getBoundingClientRect(); burst(stage, e.clientX - r.left, e.clientY - r.top);
+  setTimeout(continueToStory, RM.matches ? 0 : 160);                                       // feedback first, then movement
+});
+
+/* The cue arrives once, after the photo has landed; the drift holds while it does. */
+setTimeout(()=>{
+  stage.classList.add('cued');
+  if(RM.matches) return;
+  stage.classList.add('kb-hold'); setTimeout(()=>stage.classList.remove('kb-hold'),700);
+},RM.matches ? 0 : 700);
 
 let rz;
 addEventListener('resize',()=>{ cancelAnimationFrame(rz); rz = requestAnimationFrame(()=>{ sizeDevice(); fl.re(); }); });
