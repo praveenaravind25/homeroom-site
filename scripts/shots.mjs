@@ -273,6 +273,15 @@ const SCREENS = {
  * Each screen is reached as the product's own e2e reaches it, against the sample-data build.
  */
 const LOG_SCREENS = {
+  // The landing's dinner story (owner, 2026-11-02): the fake box's sample next week, planned, as the
+  // Meals grid draws it: dish photos in the lunch and dinner cells, portions per day.
+  meals: async (page) => {
+    await nav(page, 'meals');
+    await page.locator('[data-week="next"]').click();
+    await page.locator('[data-meal-cell] [data-dish]').first().waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll('[data-screen="meals"] img')].every((i) => i.complete && i.naturalWidth > 0));
+    await page.mouse.move(0, 0);
+  },
   // #87 (product PR #102): the fake box's sample next week as one Shopping list, as the product's
   // e2e/shopping.spec.ts reaches it. Meals → Next week → Shopping list: aisle cards, light
   // mayonnaise on its own line (only identical items merge), and "Lock in · N to buy".
@@ -307,7 +316,7 @@ const LOG_SCREENS = {
     };
     await nav(page, 'meals');
     await page.locator('[data-recipe-box-entry]').click();
-    await page.locator(`[data-shelf="new"] [data-recipe-card="${bowl}"]`).click();
+    await page.locator(`[data-recipe-card="${bowl}"]`).first().click(); // shelves or the grid (owner, 2026-11-02)
     await page.locator(`[data-screen="recipe"][data-recipe="${bowl}"]`).waitFor();
     await page.locator('[data-exit="cook"]').click();
     await page.locator('[data-cook][data-cook-step="1"]').waitFor();

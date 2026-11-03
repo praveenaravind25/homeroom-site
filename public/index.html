@@ -32,7 +32,7 @@
           <div class="b-cap" data-c="1"><span class="lab">01 · The Wall</span><h2 class="h2">It's a photo frame.</h2><p class="line">Your photos, a quiet clock, the weather and what's next. Readable from across the kitchen.</p></div>
           <div class="b-cap" data-c="2"><span class="lab">02 · A touch</span><h2 class="h2">Until you touch it.</h2><p class="line">A touch means you want something. The photo steps aside and today rises.</p></div>
           <div class="b-cap" data-c="3"><span class="lab">03 · Week</span><h2 class="h2">The week, in one look.</h2><p class="line">Everyone has a colour. Dinner sits on every day.</p></div>
-          <div class="b-cap" data-c="4"><span class="lab">03 · Week</span><h2 class="h2">Next week is one swipe away.</h2><p class="line">Planning still happens on phones. The wall just shows it.</p></div>
+          <div class="b-cap" data-c="4"><span class="lab">03 · Week</span><h2 class="h2">Next week is one swipe away.</h2><p class="line">Meals are planned right here at the wall, and the week follows.</p></div>
           <div class="b-cap" data-c="5"><span class="lab">04 · Home</span><h2 class="h2">The lights, without the app.</h2><p class="line">Only what you'd reach for. Tap Dinner and the table lights come on.</p></div>
           <div class="b-cap" data-c="6"><span class="lab">05 · Idle</span><h2 class="h2">Then it leans back.</h2><p class="line">Leave it alone and the photo comes home.</p></div>
           <div class="b-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -54,27 +54,71 @@
     </div>
   </section>
 
-  <!-- ═════════ 02 · Who ═════════ -->
+  <!-- ═════════ 02 · Dinner, start to finish: plan → one list → the phone → cook (owner, 2026-11-02) ═════════
+       Screens are the sample-data build (scripts/shots.mjs: meals, shopping, cook); the clip is the product's
+       CC0 fixture (fixtures/recipes, painted food). Never a household recipe or a creator's frame. -->
+  <section class="stick d-pin" id="dinner" aria-labelledby="dinner-h">
+    <div class="stage">
+      <div class="d-left">
+        <span class="lab">02 · Dinner, start to finish</span>
+        <h2 class="vh" id="dinner-h">Dinner, start to finish: plan the week at the wall, shop one list from your phone, and cook from the wall.</h2>
+        <div class="d-caps">
+          <div class="d-cap on" data-c="0"><h3 class="h2">Plan the week at the wall.</h3><p class="line">A dish or two covers the week's lunches and dinners. Pick them, set the days and portions, and the grid fills in.</p></div>
+          <div class="d-cap" data-c="1"><h3 class="h2">One list, by aisle.</h3><p class="line">The plan becomes one shopping list, scaled to your portions. Identical items merge, and the staples you always have are skipped.</p></div>
+          <div class="d-cap" data-c="2"><h3 class="h2">In your pocket at the store.</h3><p class="line">Lock in the week and the list is on everyone's phone. Tick things off in the aisle, and the wall knows.</p></div>
+          <div class="d-cap" data-c="3"><h3 class="h2">Then the wall cooks with you.</h3><p class="line">Cook it hands the whole wall to one step at a time: that step's clip on a loop, just the quantities it needs.</p></div>
+          <div class="d-cap" data-c="4"><h3 class="h2">One step. The whole wall.</h3><p class="line">Readable from the stove, with timers that keep counting while you move on.</p></div>
+        </div>
+        <div class="d-dots" aria-hidden="true"><i class="now"></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="d-dev">
+        <div class="d-device"><div class="d-scr" aria-hidden="true">
+          <img class="d-s on" data-s="meals" src="/assets/log/meals.png" width="1263" height="841" alt="" loading="lazy" decoding="async">
+          <img class="d-s" data-s="shopping" src="/assets/log/shopping.png" width="1263" height="841" alt="" loading="lazy" decoding="async">
+          <div class="d-s d-cook" data-s="cook">
+            <img src="/assets/log/cook.png" width="1263" height="841" alt="" loading="lazy" decoding="async">
+            <video class="d-clip" muted loop playsinline preload="none" poster="/assets/dinner/season.jpg"><source src="/assets/dinner/season.mp4" type="video/mp4"></video>
+          </div>
+        </div>
+          <div class="d-phone" aria-hidden="true">
+            <div class="d-ph-top"><b>Groceries</b><span>24 to buy</span></div>
+            <ul>
+              <li><i></i>corn kernels<em>6⅔ cup</em></li>
+              <li><i></i>chicken breast<em>5 lb</em></li>
+              <li><i></i>lime<em>4</em></li>
+              <li><i></i>cotija cheese<em>1¼ cup</em></li>
+              <li><i></i>greek yogurt<em>2½ cup</em></li>
+              <li><i></i>orzo<em>3 cup</em></li>
+              <li><i></i>baby spinach<em>4 cup</em></li>
+              <li><i></i>chili-lime seasoning<em>1½ tbsp</em></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 03 · Who ═════════ -->
   <section class="story" aria-labelledby="who-h">
-    <span class="lab rv">02 · Who it's for</span>
+    <span class="lab rv">03 · Who it's for</span>
     <h2 class="h2 rv" id="who-h" style="--i:1">One wall,<br>the whole household.</h2>
     <ul class="who3">
       <li class="rv" style="--i:1"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-1)">A</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-2)">J</span></div><p>The adults tap it.</p></li>
       <li class="rv" style="--i:2"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-1)">A</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-2)">J</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-3)">S</span><span class="av" style="width:48px;height:48px;font-size:22px;background:var(--c-person-4)">R</span></div><p>Everyone glances.</p></li>
-      <li class="rv" style="--i:3"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;background:var(--c-s2);color:var(--c-chalk)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span></div><p>Phones do the planning.</p></li>
+      <li class="rv" style="--i:3"><div class="faces" aria-hidden="true"><span class="av" style="width:48px;height:48px;background:var(--c-s2);color:var(--c-chalk)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span></div><p>Phones carry the list.</p></li>
     </ul>
   </section>
 
-  <!-- ═════════ 03 · Why (owner's words only; placeholder until supplied) ═════════ -->
+  <!-- ═════════ 04 · Why (owner's words only; placeholder until supplied) ═════════ -->
   <section class="story" aria-labelledby="why-h">
-    <span class="lab rv">03 · Why</span>
+    <span class="lab rv">04 · Why</span>
     <h2 class="h2 rv" id="why-h" style="--i:1">In the owner's words.</h2>
     <div class="pending rv" style="--i:2"><b>Pending</b><span>Supplied by the owner. No agent writes this part.</span></div>
   </section>
 
-  <!-- ═════════ 04 · How ═════════ -->
+  <!-- ═════════ 05 · How ═════════ -->
   <section class="story" aria-labelledby="how-h">
-    <span class="lab rv">04 · How it's built</span>
+    <span class="lab rv">05 · How it's built</span>
     <h2 class="h2 rv" id="how-h" style="--i:1">One small server,<br>at home.</h2>
     <p class="line rv" style="--i:2">It borrows what the house already runs.</p>
     <div class="flow rv" style="--i:3">
@@ -102,9 +146,9 @@
     <span class="lab rv">Build log</span>
     <h2 class="h2 rv" id="log-h" style="--i:1">The story so far.</h2>
     <ul class="log3">
-      <li class="rv" style="--i:1"><a class="logc pressable" href="/log/#curation"><img class="shot" src="/assets/log/why.png" width="1263" height="841" alt="The Wall: two hands held against a soft, misty field, the clock in one corner and, in the other, Why this photo, A favourite, with Hide and Like underneath." loading="lazy" decoding="async"><div class="d">November 3, 2026</div><h3>A photo frame that chooses well, and says why</h3><div class="ref">homeroom #12, #13, #15, #16, #52, #117</div></a></li>
-      <li class="rv" style="--i:2"><a class="logc pressable" href="/log/#settings"><img class="shot" src="/assets/log/settings.png" width="1263" height="841" alt="Settings on the wall, open at Display: the sections Display, Household, Home and Layout down the left, the Back to photos ladder from 30 s to 1 hr with 5 min chosen, and the night card, dark at 10:30 PM and awake at 6:30 AM, over a noon-to-noon ribbon with the night shaded and a Now tick." loading="lazy" decoding="async"><div class="d">November 3, 2026</div><h3>Tuning the wall, from the wall</h3><div class="ref">homeroom #73, #115</div></a></li>
-      <li class="rv" style="--i:3"><a class="logc pressable" href="/log/#recipes"><img class="shot" src="/assets/log/cook.png" width="1263" height="841" alt="Cook mode on the wall for the sample corn and chicken bowl: an illustrated clip of the chicken being seasoned on the left, Step 2 of 5 with salt, smoked paprika, cumin and olive oil as quantity pills, two timers still counting down for steps 3 and 4, and large Back and Next step buttons." loading="lazy" decoding="async"><div class="d">November 2, 2026</div><h3>Recipes, from the phone to the stove</h3><div class="ref">homeroom #85, #97, #87, #102, #89, #107</div></a></li>
+      <li class="rv" style="--i:1"><a class="logc pressable" href="/log/#calm-frame"><div class="fit" data-mini="wall:hands" role="img" aria-label="The Wall: one still photo, cropped so the faces sit above the clock, with the date shown once."></div><div class="d">November 3, 2026</div><h3>A calmer frame</h3><div class="ref">homeroom #108, #116, #109, #120, #110, #113</div></a></li>
+      <li class="rv" style="--i:2"><a class="logc pressable" href="/log/#curation"><img class="shot" src="/assets/log/why.png" width="1263" height="841" alt="The Wall: two hands held against a soft, misty field, the clock in one corner and, in the other, Why this photo, A favourite, with Hide and Like underneath." loading="lazy" decoding="async"><div class="d">November 3, 2026</div><h3>A photo frame that chooses well, and says why</h3><div class="ref">homeroom #12, #13, #15, #16, #52, #117</div></a></li>
+      <li class="rv" style="--i:3"><a class="logc pressable" href="/log/#settings"><img class="shot" src="/assets/log/settings.png" width="1263" height="841" alt="Settings on the wall, open at Display: the sections Display, Household, Home and Layout down the left, the Back to photos ladder from 30 s to 1 hr with 5 min chosen, and the night card, dark at 10:30 PM and awake at 6:30 AM, over a noon-to-noon ribbon with the night shaded and a Now tick." loading="lazy" decoding="async"><div class="d">November 3, 2026</div><h3>Tuning the wall, from the wall</h3><div class="ref">homeroom #73, #115</div></a></li>
     </ul>
     <a class="more-link pressable" href="/log/">The whole build log <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
   </section>
@@ -115,5 +159,6 @@
 
 <script src="/assets/hub.js" defer></script>
 <script src="/assets/landing.js" defer></script>
+<script src="/assets/dinner.js" defer></script>
 </body>
 </html>
