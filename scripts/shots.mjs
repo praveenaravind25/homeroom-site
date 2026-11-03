@@ -365,7 +365,33 @@ const LOG_SCREENS = {
       for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
     });
   },
+  // #52 (product PR #117): Why this photo?, as the product's e2e/why.spec.ts opens it. A still press
+  // held on the lead print past the long-press; the credit's corner grows into the answer, with the
+  // reasons and Hide · Like. Nothing is liked or hidden. Run with an owner photo: --only why --photo owner-01.
+  why: async (page) => {
+    await holdLead(page);
+    await page.locator('[data-why-sheet]').waitFor();
+    await page.locator('[data-why-headline]').filter({ hasText: /\S/ }).waitFor(); // the first reason; more only if the pick has them
+    await page.locator('[data-why-like][aria-pressed="false"]').waitFor();
+    await page.locator('[data-why-hide]').waitFor();
+    await page.locator('[data-why-ring]').waitFor({ state: 'detached', timeout: 3000 }); // the ring lands and goes
+    await page.locator('.hub[data-mode="ambient"]').waitFor({ state: 'attached' }); // never the Rail
+    await page.mouse.move(0, 0);
+  },
 };
+
+/**
+ * A still finger held on the lead print past the long-press, then lifted (the product's e2e
+ * longPress()), aimed a third of the way down the print, as e2e/why.spec.ts does.
+ */
+async function holdLead(page, ms = 900) {
+  const [c] = (await page.evaluate(() => window.__homeroom.cells())) ?? [];
+  if (!c) throw new Error('no print on the wall to hold');
+  await page.mouse.move(c.x + c.w / 2, c.y + c.h / 3);
+  await page.mouse.down();
+  await page.waitForTimeout(ms);
+  await page.mouse.up();
+}
 
 const outFor = (name) => (LOG_SCREENS[name] ? LOG_OUT : OUT);
 
