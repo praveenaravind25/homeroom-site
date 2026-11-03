@@ -26,6 +26,14 @@
    "shots": 9
   },
   {
+   "slug": "issue-48",
+   "title": "UC-04 \u00b7 Yearbook: on-this-day stories",
+   "ref": "Product #48",
+   "date": "2026-11-02",
+   "thumb": "ambient.png",
+   "shots": 6
+  },
+  {
    "slug": "site-issue-1",
    "title": "Showcase \u00b7 Landing page: what, who, why, how it's built",
    "ref": "Site #1",
