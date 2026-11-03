@@ -21,7 +21,7 @@ const PAGES = {
 };
 const TEASER_COUNT = 3;
 const SHOT = { w: 1263, h: 841 };             // the wall tablet, landscape
-const KEYS = new Set(['title', 'date', 'refs', 'screenshot', 'render', 'alt', 'before', 'before_alt', 'labels']);
+const KEYS = new Set(['title', 'date', 'refs', 'screenshot', 'clip', 'render', 'alt', 'before', 'before_alt', 'labels']);
 
 /* ───────── Parse ───────── */
 
@@ -115,6 +115,13 @@ function validate(slug, d, renders) {
   if (d.render !== undefined && !renders.has(d.render))
     errors.push(`render "${d.render}" isn't one the site can draw (${[...renders].join(', ')})`);
   if (d.screenshot && d.render) errors.push('use screenshot or render, not both');
+  // A live Cook step: the step's clip loops over the screenshot's left 474 of 1263 px, where the product draws it.
+  if (d.clip !== undefined) {
+    if (!d.screenshot) errors.push('clip needs a screenshot (the Cook screen it plays on)');
+    if (d.before) errors.push('clip and before can\'t be combined');
+    if (typeof d.clip !== 'string' || !/^\/assets\/(log|dinner)\/[a-z0-9-]+\.mp4$/.test(d.clip)) errors.push(`clip "${d.clip}" should be an mp4 under /assets/log/ or /assets/dinner/`);
+    else { const file = resolve(PUBLIC, '.' + d.clip); if (!file.startsWith(PUBLIC + sep) || !existsSync(file)) errors.push(`clip ${d.clip} not found in public/`); }
+  }
   if ((d.screenshot || d.render) && !(typeof d.alt === 'string' && d.alt.length >= 10))
     errors.push('alt text is required with a screenshot or render (describe what a visitor would see)');
   if (d.alt && !d.screenshot && !d.render) errors.push('alt is set but there is no screenshot or render');
@@ -166,6 +173,7 @@ const refLine = refs => refs.map((r, i) => {
 // A screenshot if there is one, else a live render (a stand-in until #3's screenshots), else nothing:
 // no empty frame, no broken image.
 function media(e, cls = '') {
+  if (e.screenshot && e.clip) return `<div class="shot live${cls}" role="img" aria-label="${esc(e.alt)}"><img src="${esc(e.screenshot)}" width="${SHOT.w}" height="${SHOT.h}" alt="" loading="lazy" decoding="async"><video data-live muted loop playsinline preload="none" src="${esc(e.clip)}"></video></div>`;
   if (e.screenshot) return `<img class="shot${cls}" src="${esc(e.screenshot)}" width="${SHOT.w}" height="${SHOT.h}" alt="${esc(e.alt)}" loading="lazy" decoding="async">`;
   if (e.render) return `<div class="fit${cls}" data-mini="${esc(e.render)}" role="img" aria-label="${esc(e.alt)}"></div>`;
   return '';

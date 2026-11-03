@@ -14,6 +14,22 @@ const stage = pin.querySelector('.stage'), wall = pin.querySelector('.wall'), fi
 const hub = fitEl.querySelector('.hub');
 hub.innerHTML = HR.hubHTML();
 const thumb = hub.querySelector('.thumb');
+// The Meals, Shopping and Cook captures load once the visitor is past the first screen, not with the hero photo.
+addEventListener('scroll',function h(){ removeEventListener('scroll',h); HR.hydrate(hub); },{passive:true});
+
+/* Shopping: the phone arrives, and each line it ticks ticks on the wall too (same order, ~650 ms apart). */
+const phone = pin.querySelector('.d-phone'), phLeft = phone.querySelector('[data-left]');
+const ORDER = ['cucumber','asparagus','coconut','rice'];
+let ticks = [];
+function shop(on){
+  ticks.forEach(clearTimeout); ticks = [];
+  phone.classList.toggle('on', on);
+  const set = n=>{ ORDER.forEach((k,j)=>phone.querySelector(`[data-ph="${k}"]`).classList.toggle('done', j<n)); phLeft.textContent = `${45-n} to buy`; HR.setTicks(hub,n); };
+  set(0);
+  if(!on) return;
+  if(RM.matches){ set(ORDER.length); return; }
+  ORDER.forEach((_,j)=>ticks.push(setTimeout(()=>set(j+1), 900 + j*650)));
+}
 
 /* Size the tablet to whatever space is left beside the captions (or above them on phones), at 1263:841. */
 function sizeDevice(){
@@ -117,7 +133,9 @@ function continueToStory(){
 const caps = [...pin.querySelectorAll('.b-cap')], dots = [...pin.querySelectorAll('.b-dots i')];
 const quiet = [...wall.querySelectorAll('.w-cue')];
 let litT, at = -1;
-const step = stepper(pin,7,(i,p)=>{
+const SCREENS = [,, 'today','week','meals','shopping','meals','home'];   // step 6 is Cook, over Meals
+let idleT;
+const step = stepper(pin,9,(i,p)=>{
   at = i;
   stage.classList.toggle('b-on', i>=1);
   stage.classList.toggle('b-cover', i===0);
@@ -125,17 +143,22 @@ const step = stepper(pin,7,(i,p)=>{
   quiet.forEach(el=>el.style.opacity = i>=1 ? 0 : '');
   caps.forEach(c=>c.classList.toggle('on', +c.dataset.c===i));
   dots.forEach((d,j)=>d.classList.toggle('now', j===i-1));
-  clearTimeout(litT);
+  clearTimeout(litT); clearTimeout(idleT);
+  if((i===5) !== (p===5)) shop(i===5);
+  HR.cook(hub, i===6);
+  stage.classList.toggle('b-home', false);
   if(i===0){ fl.go('cover'); HR.sleep(hub); }
   else if(i===1){ fl.go('screen',{dur:p===0?'900ms':''}); HR.sleep(hub); }                 // zoom out into the tablet
-  else if(i<=5){
-    if(fl.at!=='thumb'){ fl.go('thumb'); HR.wake(hub,'today'); }                           // a touch: the photo yields, Today rises
-    const want = i===2 ? 'today' : (i<=4 ? 'week' : 'home');
-    if(hub.dataset.cur!==want) HR.showScreen(hub,want);
-    if(want==='week') HR.setWeek(hub, i===4 ? 2 : 1);                                       // next week slides in
+  else if(i<=7){
+    if(fl.at!=='thumb'){ fl.go('thumb'); HR.wake(hub,'today'); }
+    const want = SCREENS[i];
+    if(hub.dataset.cur!==want) HR.showScreen(hub,want,{rise:i!==6});
     if(want==='home') litT = setTimeout(()=>{ HR.setLit(hub,true); pressMark(); },700);   // Dinner: lamps ripple on
   }
-  else { fl.go('screen',{dur:'var(--dur-return-idle)'}); HR.sleep(hub); }                  // idle: leans back, slower
+  else {                                                                                   // idle: leans back, slower,
+    fl.go('screen',{dur:'var(--dur-return-idle)'}); HR.sleep(hub);                         // then the photo fills the room again
+    idleT = setTimeout(()=>{ if(at===8){ fl.go('cover',{dur:'1400ms'}); stage.classList.add('b-home'); } }, RM.matches ? 0 : 1600);
+  }
 });
 step();
 

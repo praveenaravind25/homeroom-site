@@ -55,7 +55,7 @@ function scrToday(){
       <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip">${av('S',24)}School</span><span class="chip">${av('H',24)}Trash day</span></div>
       <div>${AG.map(e=>`<div class="ev ${e[4]||''}"><span class="t">${e[0]}</span><span class="bar" style="background:${P[e[2]].c}"></span><span><div class="ti">${e[1]}</div><div class="sub">${P[e[2]].n}${e[3]?' · '+e[3]:''}</div></span></div>`).join('')}</div></div>
     <div class="col rise" style="gap:16px;--i:1">
-      <div class="card">${head('Dinner tonight','Meals')}<div class="h" style="font-size:24px;margin-top:6px">Spaghetti</div><div style="font-size:15px;color:var(--c-mute);margin-top:4px">6:30 PM · Plan lunch ›</div></div>
+      <div class="card">${head('Dinner tonight','Meals')}<div class="h" style="font-size:24px;margin-top:6px">Coconut lime chicken</div><div style="font-size:15px;color:var(--c-mute);margin-top:4px">6:30 PM · Hot honey chicken for lunch</div></div>
       <div class="card col" style="flex:1;gap:4px">${head('Chores · 3 left','All')}${CH.map(c=>`<div class="chore${c[2]?' done':''}"><span class="chk">${c[2]?I('check',16,3):''}</span>${av(c[1],24)}<span class="tx">${c[0]}</span></div>`).join('')}</div>
       <div class="card row" style="padding:16px 22px;justify-content:space-between"><span><div class="lab">Lists</div><div style="font-size:17px;margin-top:4px">Groceries 6 · To-do 3</div></span>${I('chev',18)}</div>
     </div>
@@ -74,22 +74,23 @@ function light(n,pct,on,r){
 }
 
 /* ── Week: this week and next on one track ── */
+const CL = 'Coconut lime chicken', CJ = 'Cajun chicken mash';
 const W1 = [
-  ['Sun',25,'68°','past','Roast chicken',[]],
-  ['Mon',26,'66°','past','Tacos',[['6:30 AM','Gym','J'],['9 AM','Dentist','A'],['3:30 PM','Swim class','R']]],
-  ['Tue',27,'64°','today','Spaghetti',[['Now','Coffee with Mara','A','now'],['11 AM','Library story time','R'],['12 PM','Team lunch','J'],['4 PM','Piano lesson','S']]],
-  ['Wed',28,'63°','','Salmon & rice',[['All day','Field trip','S'],['3:30 PM','Math tutoring','S'],['7 PM','Book club','A']]],
-  ['Thu',29,'66°','','Stir fry',[['All day','Work trip','A'],['5 PM','Soccer practice','S']]],
-  ['Fri',30,'64°','','Pizza night',[['8:30 AM','Yoga','A'],['6 PM','Pizza night','H']]],
-  ['Sat',31,'68°','','Burgers',[['10 AM','Haircut','J'],['1 PM','Playdate','R'],['5:30 PM','Trick-or-treat','H']]]];
+  ['Sun',1,'61°','past',CL,[['10 AM','Farmers market','H']]],
+  ['Mon',2,'60°','past',CL,[['6:30 AM','Gym','J'],['9 AM','Dentist','A'],['3:30 PM','Swim class','R']]],
+  ['Tue',3,'64°','today',CL,[['Now','Coffee with Mara','A','now'],['11 AM','Library story time','R'],['12 PM','Team lunch','J'],['4 PM','Piano lesson','S']]],
+  ['Wed',4,'63°','',CL,[['All day','Field trip','S'],['3:30 PM','Math tutoring','S'],['7 PM','Book club','A']]],
+  ['Thu',5,'66°','',CJ,[['All day','Work trip','A'],['5 PM','Soccer practice','S']]],
+  ['Fri',6,'64°','',CJ,[['8:30 AM','Yoga','A'],['6 PM','Game night','H']]],
+  ['Sat',7,'68°','',CJ,[['10 AM','Haircut','J'],['1 PM','Playdate','R'],['5:30 PM','Movie night','H']]]];
 const W2 = [
-  ['Sun',1,'61°','','Chili',[['10 AM','Farmers market','H']]],
-  ['Mon',2,'60°','','',[['All day','School','S'],['6:30 AM','Gym','J']]],
-  ['Tue',3,'58°','','Soup & bread',[['All day','Trash day','H'],['7 PM','Parent night','H']]],
-  ['Wed',4,'59°','','',[['3:30 PM','Math tutoring','S'],['5:30 PM','Soccer coaching','J']]],
-  ['Thu',5,'62°','','Tacos',[['6:30 AM','Gym','J'],['11 AM','Story time','R']]],
-  ['Fri',6,'63°','','Pizza night',[['6 PM','Movie night','H']]],
-  ['Sat',7,'65°','','',[['9 AM','Soccer game','S'],['2 PM','Birthday party','R']]]];
+  ['Sun',8,'61°','','',[['10 AM','Farmers market','H']]],
+  ['Mon',9,'60°','','',[['All day','School','S'],['6:30 AM','Gym','J']]],
+  ['Tue',10,'58°','','',[['All day','Trash day','H'],['7 PM','Parent night','H']]],
+  ['Wed',11,'59°','','',[['3:30 PM','Math tutoring','S'],['5:30 PM','Soccer coaching','J']]],
+  ['Thu',12,'62°','','',[['6:30 AM','Gym','J'],['11 AM','Story time','R']]],
+  ['Fri',13,'63°','','',[['6 PM','Movie night','H']]],
+  ['Sat',14,'65°','','',[['9 AM','Soccer game','S'],['2 PM','Birthday party','R']]]];
 function weekGrid(days,rise){
   return `<div class="wk-grid">${days.map((d,i)=>`<div class="card day ${d[3]} ${rise?'rise':''}" style="--i:${i}">
     <div class="more" style="min-height:0"><span class="lab">${d[0]}</span><span style="font-size:13px;color:var(--c-mute);display:flex;gap:4px;align-items:center">${I('cloud',14)} ${d[2]}</span></div>
@@ -124,15 +125,48 @@ function scrHome(){
     </div></div></div>`;
 }
 
+/* ── Meals → Shopping → Cook: the product's own screens, captured from the hub with the week the household
+   planned (owner, 2026-11-03: the site shows what the demo tablet shows). Images carry data-src and load only
+   when a page asks (HR.hydrate), so the build log's minis never fetch them. ── */
+const D = '/assets/dinner/';
+// The four lines the phone ticks, in its order, at the product's own boxes (content px), plus "Lock in · 41 to buy".
+const TICKS = [['cucumber',20,183],['asparagus',20,134],['coconut',395.5,505],['rice',395.5,348]];
+function scrMeals(){ return `<div class="scr" data-s="meals"><img class="shot-full" data-src="${D}meals.webp" width="1111" height="717" alt=""></div>`; }
+function scrShopping(){
+  return `<div class="scr" data-s="shopping"><img class="shot-full" data-src="${D}shopping.webp" width="1111" height="717" alt="">
+    ${TICKS.map(([k,x,y])=>`<img class="tk" data-tk="${k}" data-src="${D}tick-${k}.webp" style="left:${x}px;top:${y}px" width="320" height="48" alt="">`).join('')}
+    <img class="tk lk" data-src="${D}lock.webp" style="left:882px;top:645px" width="222" height="64" alt=""></div>`;
+}
+/* Cook mode takes the whole hub, rail included, as the product does: the step's clip on the left 474 px. */
+function cookHTML(){
+  return `<div class="h-cook"><img class="shot-full" data-src="${D}cook.webp" width="1263" height="841" alt="">
+    <video class="ck-clip" muted loop playsinline preload="none" data-poster="${D}cook.jpg" data-src="${D}cook.mp4"></video>
+    <span class="ck-tag">Looping · sound off</span><span class="ck-watch"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Watch with sound</span></div>`;
+}
+function hydrate(hub){
+  hub.querySelectorAll('[data-src]').forEach(el=>{ el.src = el.dataset.src; el.removeAttribute('data-src'); });
+  hub.querySelectorAll('[data-poster]').forEach(el=>{ el.poster = el.dataset.poster; el.removeAttribute('data-poster'); });
+}
+function setTicks(hub,n){
+  hub.querySelectorAll('[data-tk]').forEach((t,i)=>t.classList.toggle('on', i<n));
+  hub.querySelector('.tk.lk')?.classList.toggle('on', n>=TICKS.length);
+}
+function cook(hub,on){
+  hub.classList.toggle('cooking', on);
+  const v = hub.querySelector('.ck-clip'); if(!v) return;
+  if(on && !matchMedia('(prefers-reduced-motion: reduce)').matches){ v.preload = 'auto'; v.play().catch(()=>{}); } else v.pause();
+}
+
 /* ── The shell: rail, header, content box ── */
 const RAIL = [['today','cal','Today'],['week','week','Week'],['meals','meals','Meals'],['lists','list','Lists'],['chores','chores','Chores'],['home','home','Home'],['cams','cam','Cameras']];
-const HEAD = {today:['Tuesday, October 27','10:42 · 64° rain after 3'],week:['Week','This week · Oct 25 – 31'],week2:['Week','Next week · Nov 1 – 7'],home:['Home','2 lights on · 70° heat · locked'],homelit:['Home','4 lights on · 70° heat · locked']};
+const HEAD = {today:['Tuesday, November 3','10:42 · 64° rain after 3'],week:['Week','This week · Nov 1 – 7'],week2:['Week','Next week · Nov 8 – 14'],
+  meals:['Meals','This week · Nov 1 – 7 · 12 meals planned'],shopping:['Shopping list','Shop the plan, then lock in the week'],home:['Home','2 lights on · 70° heat · locked'],homelit:['Home','4 lights on · 70° heat · locked']};
 function hubHTML(){
   return `<div class="h-rail"><span class="h-ind"></span>${RAIL.map(r=>`<span class="h-nav" data-k="${r[0]}">${I(r[1],24)}${r[2]}</span>`).join('')}
     <span class="h-photos"><span class="thumb"><img src="${IMG.hero}" alt="" style="object-position:${POS.hero}"></span>Photos</span></div>
     <div class="h-head"><div><div class="h-title"></div><div class="h-sum"></div></div><div style="flex:1"></div>
       <span class="row" style="gap:6px">${PEOPLE.map(k=>av(k,34,!P[k].home)).join('')}</span><span class="icn">${I('bell',20)}<span class="badge">2</span></span><span class="btn pri">${I('plus',18)} Add</span></div>
-    <div class="h-content">${scrToday()}${scrWeek()}${scrHome()}</div>`;
+    <div class="h-content">${scrToday()}${scrWeek()}${scrMeals()}${scrShopping()}${scrHome()}</div>${cookHTML()}`;
 }
 /* The Wall's overlay without the cue: used for build-log thumbnails. The hero's Wall is static HTML (works without JS). */
 function wallHTML(photo){
@@ -140,7 +174,7 @@ function wallHTML(photo){
   return `<div class="kb"><img src="${IMG[photo]}" alt="" width="${w}" height="${h}" loading="lazy" decoding="async" style="object-position:${POS[photo]||'50% 50%'}"></div>
   <div class="w-ov"><div class="s s-d"></div>
     <div class="abs w-temp"><b>64°</b><span>Rain after 3</span></div>
-    <div class="abs w-time"><div class="w-date">Tuesday, October 27</div><div class="w-clock">10:42</div>
+    <div class="abs w-time"><div class="w-date">Tuesday, November 3</div><div class="w-clock">10:42</div>
       <div class="w-next"><i>NEXT</i><b>11 AM&nbsp; Library story time</b><span>Riley</span></div></div></div>`;
 }
 
@@ -153,8 +187,9 @@ function setHead(hub,key){
 }
 function showScreen(hub,s,{rise=true}={}){
   hub.querySelectorAll('.scr').forEach(x=>x.classList.toggle('on-scr',x.dataset.s===s));
-  hub.style.setProperty('--ni',RAIL.findIndex(r=>r[0]===s));
-  hub.querySelectorAll('.h-nav').forEach(n=>n.classList.toggle('cur',n.dataset.k===s));
+  const k = s==='shopping' ? 'meals' : s;                                                  // Shopping lives under Meals
+  hub.style.setProperty('--ni',RAIL.findIndex(r=>r[0]===k));
+  hub.querySelectorAll('.h-nav').forEach(n=>n.classList.toggle('cur',n.dataset.k===k));
   hub.dataset.cur=s; setWeek(hub,1); setLit(hub,false); setHead(hub,s);
   if(rise) replay(hub);
 }
@@ -199,7 +234,15 @@ function watchReveals(root=document){
   root.querySelectorAll('.rv').forEach(el=>io.observe(el));
 }
 
+/* ── Live Cook steps in the build log: the clip plays only while on screen, and never under reduced motion ── */
+(function(){
+  const vs = document.querySelectorAll('video[data-live]');
+  if(!vs.length || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const io = new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.preload = 'auto'; e.target.play().catch(()=>{}); } else e.target.pause(); }),{threshold:.25});
+  vs.forEach(v=>io.observe(v));
+})();
+
 let rz; addEventListener('resize',()=>{ cancelAnimationFrame(rz); rz=requestAnimationFrame(()=>fitMinis()); });
 
-window.HR = {IMG,ALT,I,hubHTML,showScreen,setWeek,setLit,wake,sleep,replay,mountMinis,fitMinis,watchReveals};
+window.HR = {IMG,ALT,I,hubHTML,showScreen,setWeek,setLit,wake,sleep,replay,mountMinis,fitMinis,watchReveals,hydrate,setTicks,cook};
 })();
