@@ -2,6 +2,14 @@
  "generated": "2026-11-02",
  "mockups": [
   {
+   "slug": "site-issue-26",
+   "title": "the first page / view of the landing page needs some tweaks.",
+   "ref": "Site #26",
+   "date": "2026-11-02",
+   "thumb": "continued-phone.png",
+   "shots": 11
+  },
+  {
    "slug": "site-issue-22",
    "title": "Site: real photos on the wall imagery + the new text style (option D)",
    "ref": "Site #22",
