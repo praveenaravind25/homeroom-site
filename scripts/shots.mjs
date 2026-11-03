@@ -350,6 +350,21 @@ const LOG_SCREENS = {
     // The view shows a decoded frame, never an empty stage (a blank view isn't worth shipping).
     await page.waitForFunction(() => [...document.querySelectorAll('[data-takeover] [data-camera-view] img')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15_000 });
   },
+  // #73 (product PR #115): Settings → Display, as the product's e2e/settings.spec.ts reaches it.
+  // Rail → the gear: the section list, the Back to photos ladder (5 min default) and the night card
+  // with its noon-to-noon ribbon. Nothing is changed or saved, so the save bar stays down.
+  settings: async (page) => {
+    await toRail(page);
+    await page.locator('[data-gear]').click();
+    await page.locator('[data-rail][data-screen-id="settings"]').waitFor();
+    await page.locator('[data-section-pane="display"] [data-ladder]').waitFor();
+    await page.locator('[data-setting="night"] [data-ribbon]').waitFor();
+    await page.locator('[data-savebar="down"]').waitFor({ state: 'attached' });
+    await page.mouse.move(0, 0); // no hover state left on the gear
+    await page.locator('[data-screen="settings"]').evaluate((root) => {
+      for (const el of [root, ...root.querySelectorAll('*')]) if (el.scrollTop) el.scrollTop = 0;
+    });
+  },
 };
 
 const outFor = (name) => (LOG_SCREENS[name] ? LOG_OUT : OUT);
