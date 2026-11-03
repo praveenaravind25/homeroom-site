@@ -30,11 +30,16 @@
   --site-h1:clamp(52px,6.4vw,104px); --site-h2:clamp(40px,4.6vw,72px); --site-line:clamp(17px,1.45vw,21px);
   --site-gutter:clamp(24px,5.6vw,80px);
   --kb-cycle:34s;
+  /* Site-only: the hero develops (#28). The photo settles from a slight scale, the words rise after it,
+     and the touch cue follows the words. JS reads the two delays, so the timings live here only. */
+  --intro-settle-from:scale(1.04); --dur-intro-settle:1400ms; --dur-intro-fade:900ms;
+  --delay-intro-words:420ms; --intro-stagger:60ms; --delay-intro-cue:700ms; --intro-failsafe:4s;
 }
 /* The product's reduced-motion block: rises become short crossfades, the yield becomes a fade. */
 @media (prefers-reduced-motion:reduce){:root{
   --rail-rise-from:none; --exit-to:none; --press-scale:1; --dur-rise:320ms; --dur-yield:0ms; --dur-return-idle:0ms;
-  --rail-lead:0ms; --rail-stagger:0ms; --dur-indicator:0ms; --dur-ripple:0ms; --tick-travel:0px; --delay-overlay-in:0ms}}
+  --rail-lead:0ms; --rail-stagger:0ms; --dur-indicator:0ms; --dur-ripple:0ms; --tick-travel:0px; --delay-overlay-in:0ms;
+  --intro-settle-from:none; --dur-intro-settle:0ms; --dur-intro-fade:0ms; --delay-intro-words:0ms; --intro-stagger:0ms; --delay-intro-cue:0ms}}
 
 *{box-sizing:border-box}
 html{background:var(--c-rail-ground);color:var(--c-chalk);font-family:var(--font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
@@ -107,6 +112,32 @@ img{max-width:none}
 @keyframes tapdot{0%,4%{transform:scale(1)}9%{transform:scale(.72)}18%,100%{transform:scale(1)}}
 /* One thing moves at a time: the photo's drift holds while the cue arrives. */
 .kb-hold .kb img{animation-play-state:paused}
+
+/* The hero develops (homeroom-site #28): the photo alone on the ground, then it settles in whole, then the
+   gradient and the words rise in reading order, then the touch cue (.cued, above). .intro sits on the stage
+   in the HTML, so the first paint is already the start state; landing.js adds .run and steps it through
+   .photo-in and .words-in, then removes all four, leaving the plain base styles. The settle lives on .kb
+   because .wall's transform belongs to the flyer and .kb img's to the Ken Burns drift. Each rise is on
+   children only, so the containers' own opacity (the step-0 cue, the top bar) keeps working.
+   Failsafe: if landing.js never runs, intro-safe shows everything after --intro-failsafe. No JS: no .js,
+   nothing hidden. */
+.wall{background:var(--c-ground)}
+.w-ov .s-d{--ik:0} .top a{--ik:1} .w-date{--ik:2} .w-clock{--ik:3} .w-next{--ik:4} .w-temp > *{--ik:5} .w-cue > *{--ik:6}
+.phone-cue > b{--ik:2} .phone-cue > span{--ik:3}
+.js .intro .kb{opacity:0;transform:var(--intro-settle-from)}
+.js .intro :is(.w-ov .s-d,.top a,.w-time > *,.w-temp > *,.w-cue > :not(.tp),.phone-cue > :not(.tp)),
+.js .intro .phone-cue::before{opacity:0;transform:var(--rail-rise-from)}
+@keyframes intro-safe{to{opacity:1;transform:none}}
+.js .intro:not(.run) :is(.kb,.w-ov .s-d,.top a,.w-time > *,.w-temp > *,.w-cue > :not(.tp),.phone-cue > :not(.tp)),
+.js .intro:not(.run) .phone-cue::before{animation:intro-safe 1ms var(--intro-failsafe) forwards}
+.js .intro.photo-in .kb{opacity:1;transform:none;transition:opacity var(--dur-intro-fade) var(--ease-settle),transform var(--dur-intro-settle) var(--ease-settle)}
+.js .intro.words-in :is(.w-ov .s-d,.top a,.w-time > *,.w-temp > *,.w-cue > :not(.tp),.phone-cue > :not(.tp)){opacity:1;transform:none;
+  transition:opacity var(--dur-rise) var(--ease-settle),transform var(--dur-rise) var(--ease-settle);transition-delay:calc(var(--ik,0) * var(--intro-stagger))}
+/* The gradient is a wide, quiet layer: it comes up on the slower fade, first. */
+.js .intro.words-in .w-ov .s-d,.js .intro.words-in .phone-cue::before{opacity:1;transform:none;transition:opacity var(--dur-intro-fade) var(--ease-settle),transform var(--dur-intro-fade) var(--ease-settle)}
+/* A skip (a press, a scroll, focus, reduced motion): straight to the end state, no in-between. */
+.js .intro.intro-snap :is(.kb,.w-ov .s-d,.top a,.w-time > *,.w-temp > *,.w-cue > :not(.tp),.phone-cue > :not(.tp)),
+.js .intro.intro-snap .phone-cue::before{transition:none!important}
 
 /* Click to continue: at step 0 the photo is pressable, and a press answers with a burst at the press point.
    The same burst, faster, marks the Dinner press inside the tablet, so both touches feel like one hand. */
