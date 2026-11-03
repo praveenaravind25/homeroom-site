@@ -7,7 +7,7 @@
 'use strict';
 const HR = window.HR;
 const pin = document.getElementById('pin');
-if(!HR || !pin) return;
+if(!HR || !pin){ pin && pin.querySelector('.stage').classList.remove('intro'); return; }   // no hero script: show the still Wall now
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)');
 const stage = pin.querySelector('.stage'), wall = pin.querySelector('.wall'), fitEl = pin.querySelector('.device .fit'), bLeft = pin.querySelector('.b-left');
@@ -103,6 +103,63 @@ sizeDevice();
 const fl = flyer();
 fl.go('cover',{snap:true}); HR.showScreen(hub,'today',{rise:false});
 
+/* The cue arrives once, last, after the words have risen; the drift holds while it does. */
+let cuedOnce = false;
+function cue(){
+  if(cuedOnce) return; cuedOnce = true;
+  stage.classList.add('cued');
+  if(RM.matches) return;
+  stage.classList.add('kb-hold'); setTimeout(()=>stage.classList.remove('kb-hold'),700);
+}
+
+/* ── The hero develops (#28): once per load. The photo is revealed only whole: after img.decode(), it settles
+   in on --ease-settle, and --delay-intro-words later the gradient and words rise (CSS staggers them), then
+   the cue. If the photo hasn't decoded 1.5 s after navigation start, the words rise over the ground anyway
+   and the photo settles in whenever it arrives. Reduced motion: the same gates, but every step snaps.
+   A press, a scroll past step 0 or focus in the hero skips to the end state; a photo still on its way
+   keeps waiting for decode. If the image fails, everything shows (the static Wall). ── */
+const intro = (()=>{
+  const cl = stage.classList, img = wall.querySelector('.kb img');
+  if(!cl.contains('intro') || !img){ cl.remove('intro'); cue(); return {skip(){}}; }
+  const css = getComputedStyle(document.documentElement);
+  const ms = n=>parseFloat(css.getPropertyValue(n)) || 0;                                 // the tokens are written in ms
+  let photo = false, words = false, photoDone = false, wordsDone = false, over = false;
+  const timers = [], later = (fn,t)=>timers.push(setTimeout(fn,t));
+  const snap = fn=>{ cl.add('intro-snap'); fn(); void stage.offsetWidth; cl.remove('intro-snap'); };
+  const step = (fn,instant)=>instant || RM.matches ? snap(fn) : fn();
+  function tidy(){                                                                        // back to the plain base styles: same values, nothing moves
+    if(over || !photoDone || !wordsDone) return;
+    over = true; timers.forEach(clearTimeout);
+    cl.remove('intro','run','photo-in','words-in');
+  }
+  function showWords(instant){
+    if(words) return; words = true;
+    step(()=>cl.add('words-in'),instant);
+    if(instant || RM.matches){ cue(); wordsDone = true; tidy(); return; }
+    later(cue, ms('--delay-intro-cue'));
+    later(()=>{ wordsDone = true; tidy(); }, ms('--delay-intro-cue') + ms('--dur-rise'));
+  }
+  function showPhoto(instant){
+    if(photo) return; photo = true;
+    step(()=>cl.add('photo-in'),instant);
+    if(!words) later(()=>showWords(), RM.matches ? 0 : ms('--delay-intro-words'));
+    if(instant || RM.matches){ photoDone = true; tidy(); }
+    else later(()=>{ photoDone = true; tidy(); }, ms('--dur-intro-settle'));
+  }
+  // Start state is already painted (from the HTML); .run hands it from the CSS failsafe to these timers.
+  cl.add('run'); void stage.offsetWidth;
+  const decoded = 'decode' in img ? img.decode()
+    : new Promise((ok,no)=>{ if(img.complete) return img.naturalWidth ? ok() : no(); img.addEventListener('load',ok,{once:true}); img.addEventListener('error',no,{once:true}); });
+  decoded.then(()=>showPhoto(), ()=>{
+    if(img.complete && img.naturalWidth) return showPhoto();                              // decode() can reject on a good image (e.g. a source swap)
+    showPhoto(true); showWords(true);                                                     // a broken image: the static Wall, at once
+  });
+  later(()=>{ if(!photo) showWords(); }, Math.max(0, 1500 - performance.now()));          // the page is never blank
+  // Skip: snap whatever is mid-flight (words, a settling photo) to its end; an undecoded photo keeps its gate.
+  return {skip(){ if(over) return; snap(()=>{ words = true; cl.add('words-in'); }); cue(); wordsDone = true; if(photo) photoDone = true; tidy(); }};
+})();
+stage.addEventListener('focusin',()=>intro.skip());                                      // never an invisible focused link
+
 /* ── The burst: a chalk dot springs in and two rings expand from a press point (in parent px) ── */
 function burst(parent,x,y,cls=''){
   if(RM.matches) return;
@@ -139,7 +196,7 @@ const step = stepper(pin,9,(i,p)=>{
   at = i;
   stage.classList.toggle('b-on', i>=1);
   stage.classList.toggle('b-cover', i===0);
-  if(i!==0) stage.classList.remove('hov');                                                 // the finger only lives on the photo
+  if(i!==0){ stage.classList.remove('hov'); intro.skip(); }                                // the finger only lives on the photo; the intro never chases a scroll
   quiet.forEach(el=>el.style.opacity = i>=1 ? 0 : '');
   caps.forEach(c=>c.classList.toggle('on', +c.dataset.c===i));
   dots.forEach((d,j)=>d.classList.toggle('now', j===i-1));
@@ -174,6 +231,7 @@ stage.addEventListener('click',e=>{
   if(at!==0 || e.button!==0 || e.defaultPrevented) return;
   if(e.target.closest('a,button,input,select,textarea,label,summary,[tabindex],[contenteditable]')) return;
   const sel = getSelection(); if(sel && String(sel).length) return;
+  intro.skip();                                                                            // a press mid-intro: the end state, then continue
   const r = stage.getBoundingClientRect(); burst(stage, e.clientX - r.left, e.clientY - r.top);
   setTimeout(continueToStory, RM.matches ? 0 : 160);                                       // feedback first, then movement
 });
@@ -200,12 +258,6 @@ stage.addEventListener('pointermove',e=>{
 });
 stage.addEventListener('pointerleave',fHide);
 
-/* The cue arrives once, after the photo has landed; the drift holds while it does. */
-setTimeout(()=>{
-  stage.classList.add('cued');
-  if(RM.matches) return;
-  stage.classList.add('kb-hold'); setTimeout(()=>stage.classList.remove('kb-hold'),700);
-},RM.matches ? 0 : 700);
 
 let rz;
 addEventListener('resize',()=>{ cancelAnimationFrame(rz); rz = requestAnimationFrame(()=>{ sizeDevice(); fl.re(); }); });
