@@ -389,6 +389,8 @@ img{max-width:none}
 
 /* ═════════ Meals → Shopping → Cook, inside the hero's tablet (owner, 2026-11-03) ═════════ */
 .hub .shot-full{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+.hub .pc{position:absolute;overflow:hidden}
+.hub .pc img{position:absolute;display:block;max-width:none}
 .hub .tk{position:absolute;display:block;opacity:0;transition:opacity 260ms var(--ease-out)}
 .hub .tk.on{opacity:1}
 /* Cook mode covers the whole hub, rail and header included, like the product. */
