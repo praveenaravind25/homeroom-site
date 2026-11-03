@@ -259,8 +259,15 @@ stage.addEventListener('pointermove',e=>{
 stage.addEventListener('pointerleave',fHide);
 
 
-let rz;
-addEventListener('resize',()=>{ cancelAnimationFrame(rz); rz = requestAnimationFrame(()=>{ sizeDevice(); fl.re(); }); });
+/* Re-fit whenever the stage's real box changes (#39), not only on window resize: a phone's URL bar, rotation,
+   a scrollbar arriving or a late layout can all change it without one. One rAF per frame, and it snaps,
+   so a re-fit is never a visible re-scale. */
+let rz, sw = stage.clientWidth, sh = stage.clientHeight;
+const refit = ()=>{ cancelAnimationFrame(rz); rz = requestAnimationFrame(()=>{ sw = stage.clientWidth; sh = stage.clientHeight; sizeDevice(); fl.re(); }); };
+addEventListener('resize',refit);
+if('ResizeObserver' in window) new ResizeObserver(()=>{ if(stage.clientWidth!==sw || stage.clientHeight!==sh) refit(); }).observe(stage);
+// The captions' width feeds sizeDevice(); re-place only if the tablet actually moved, so a late font never cuts a zoom short.
+if(document.fonts) document.fonts.ready.then(()=>{ const w = fitEl.offsetWidth; sizeDevice(); if(fitEl.offsetWidth!==w) fl.re(); });
 
 HR.mountMinis();
 HR.watchReveals();

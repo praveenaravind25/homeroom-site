@@ -260,7 +260,10 @@ img{max-width:none}
 
 /* ═════════ The pinned tablet (landing hero) ═════════ */
 .stick{position:relative}
-.stick > .stage{position:sticky;top:0;height:100vh;overflow:hidden}
+/* svh, not vh (#39): on a phone 100vh is the viewport with the URL bar hidden, so the stage was taller than the
+   first screen and the cover fit over-scaled to match. svh is what's visible on load, and it never changes
+   mid-scroll, so the pinned steps don't re-fit while the bar slides. 100vh stays as the fallback. */
+.stick > .stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 .b-pin{height:1040vh}
 .b-pin .stage{display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:clamp(24px,4vw,64px);padding:0 clamp(24px,4.4vw,64px);align-items:center}
 .b-caps{position:relative;height:340px}
@@ -400,7 +403,7 @@ img{max-width:none}
 /* ───────── No JS: a still Wall hero, then the page continues ───────── */
 .no-js .b-pin{height:auto}
 .no-js .b-pin .stage{position:relative;display:flex;flex-direction:column;height:auto;padding:0;overflow:visible}
-.no-js .b-pin .wall{position:relative;order:-1;width:100%;height:100vh;transform:none}
+.no-js .b-pin .wall{position:relative;order:-1;width:100%;height:100vh;height:100svh;transform:none}
 .no-js .device,.no-js .b-lamp,.no-js .b-dots,.no-js .phone-cue{display:none}
 .no-js .b-left{opacity:1;max-width:1280px;margin:0 auto;padding:clamp(72px,12vh,140px) var(--site-gutter) 0}
 .no-js .b-caps{height:auto}

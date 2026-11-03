@@ -9,6 +9,7 @@
   "scripts": {
     "check:site": "node scripts/check-site.mjs",
     "test": "node --test scripts/check-site.test.mjs scripts/shots.test.mjs",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "hero-fit": "node scripts/hero-fit.mjs"
   }
 }
